@@ -1,0 +1,2 @@
+# allin-wallet
+Lightweight wallet.
