@@ -58,7 +58,6 @@ export default function SagaConnect() {
         });
 
         if (accounts.length > 0) {
-          const pk = Buffer.from(accounts[0].publicKey).toString('base64');
           setPubkey(accounts[0].address);
           setPendingSagaPubkey(accounts[0].address);
           setConnected(true);

@@ -48,8 +48,8 @@ class WalletConnectService {
     const core = new Core({
       projectId: WC_PROJECT_ID,
       storage: {
-        // Use AsyncStorage for React Native
-        getItem: (key) => AsyncStorage.getItem(key),
+        // Use AsyncStorage for React Native (map null → undefined for WC type)
+        getItem: (key) => AsyncStorage.getItem(key).then((v) => v ?? undefined),
         setItem: (key, value) => AsyncStorage.setItem(key, value),
         removeItem: (key) => AsyncStorage.removeItem(key),
         getKeys: async () => {
