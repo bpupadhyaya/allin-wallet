@@ -1,12 +1,73 @@
+/**
+ * Landing screen — shown to any user without an existing wallet.
+ * Presents all wallet creation/import options in one place.
+ */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../../src/components/Button';
 import { DevShortcut } from '../../../src/components/DevShortcut';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
 import { useAppStore } from '../../../src/store/appStore';
 import { DEV_MNEMONIC } from '../../../src/constants/config';
+
+interface OptionCardProps {
+  icon: string;
+  title: string;
+  description: string;
+  onPress: () => void;
+  variant?: 'default' | 'secondary' | 'outline';
+  disabled?: boolean;
+  badge?: string;
+}
+
+function OptionCard({
+  icon,
+  title,
+  description,
+  onPress,
+  variant = 'default',
+  disabled,
+  badge,
+}: OptionCardProps) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.card,
+        variant === 'secondary' && styles.cardSecondary,
+        variant === 'outline' && styles.cardOutline,
+        disabled && styles.cardDisabled,
+      ]}
+      onPress={disabled ? undefined : onPress}
+      activeOpacity={disabled ? 1 : 0.75}
+    >
+      <View style={styles.cardLeft}>
+        <Text style={styles.cardIcon}>{icon}</Text>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cardTitleRow}>
+          <Text style={[styles.cardTitle, disabled && styles.cardTitleDisabled]}>
+            {title}
+          </Text>
+          {badge && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.cardDesc}>{description}</Text>
+      </View>
+      {!disabled && <Text style={styles.cardChevron}>›</Text>}
+    </TouchableOpacity>
+  );
+}
 
 export default function OnboardingIndex() {
   const { setPendingMnemonic } = useAppStore();
@@ -14,84 +75,63 @@ export default function OnboardingIndex() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
+
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>⬡</Text>
-          <Text style={styles.title}>Create Your Wallet</Text>
+          <Text style={styles.title}>AllIn Wallet</Text>
           <Text style={styles.subtitle}>
-            AllIn Wallet is 100% non-custodial.{'\n'}
-            Your keys never leave your device.
+            100% non-custodial · Your keys, your coins
           </Text>
         </View>
 
         {/* Security notice */}
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>🔐 Before you begin</Text>
           <Text style={styles.noticeText}>
-            • You are fully responsible for your funds.{'\n'}
-            • No one — including AllIn — can recover your wallet if you lose
-            your seed phrase or credentials.{'\n'}
-            • Never share your seed phrase, password, or PIN with anyone.{'\n'}
-            • Store your seed phrase offline in a safe location.
+            🔐 AllIn never has access to your funds. No one can recover your
+            wallet if you lose your seed phrase or credentials.
           </Text>
         </View>
 
-        {/* Method cards */}
-        <Text style={styles.sectionLabel}>Choose wallet type</Text>
+        {/* Options */}
+        <Text style={styles.sectionLabel}>Create or restore a wallet</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>📝</Text>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardTitle}>Seed Phrase Wallet</Text>
-            <Text style={styles.cardDesc}>
-              Standard BIP-39 wallet compatible with MetaMask, Phantom, and any
-              HD wallet. Works on all devices. Gives you access to BTC, ETH,
-              and SOL from one phrase.
-            </Text>
-          </View>
-          <Button
-            title="Create"
-            onPress={() => router.push('/(auth)/onboarding/seed-generate')}
-            style={styles.cardBtn}
-          />
-        </View>
+        <OptionCard
+          icon="📝"
+          title="New Seed Phrase Wallet"
+          description="Generate a new BIP-39 wallet. Works for BTC, ETH, and SOL. Compatible with MetaMask, Phantom, and any HD wallet."
+          onPress={() => router.push('/(auth)/onboarding/seed-generate')}
+        />
 
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>📱</Text>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardTitle}>Solana Seeker / Saga Key</Text>
-            <Text style={styles.cardDesc}>
-              Use the secure hardware key built into your Solana phone. Provides
-              SOL-chain access via the Mobile Wallet Adapter. You will still set
-              a username, password, and PIN for app-level security.
-            </Text>
-          </View>
-          <Button
-            title="Connect"
-            variant="secondary"
-            onPress={() => router.push('/(auth)/onboarding/saga-connect')}
-            style={styles.cardBtn}
-          />
-        </View>
+        <OptionCard
+          icon="📱"
+          title="Solana Seeker / Saga Key"
+          description="Use the secure hardware key built into your Solana phone. SOL-chain only. Android required."
+          onPress={() => router.push('/(auth)/onboarding/saga-connect')}
+          variant="secondary"
+          badge={Platform.OS !== 'android' ? 'Android only' : undefined}
+        />
 
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>🔄</Text>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardTitle}>Import Existing Wallet</Text>
-            <Text style={styles.cardDesc}>
-              Already have a BIP-39 seed phrase? Enter your 12 or 24 words to
-              restore your existing BTC, ETH, and SOL accounts.
-            </Text>
-          </View>
-          <Button
-            title="Import"
-            variant="outline"
-            onPress={() => router.push('/(auth)/onboarding/import')}
-            style={styles.cardBtn}
-          />
-        </View>
+        <OptionCard
+          icon="🔄"
+          title="Import Existing Wallet"
+          description="Already have a wallet? Enter your 12 or 24-word BIP-39 recovery phrase to restore BTC, ETH, and SOL."
+          onPress={() => router.push('/(auth)/onboarding/import')}
+          variant="outline"
+        />
 
-        {/* Dev shortcut — pre-fill seed phrase and skip to credentials */}
+        {/* Existing wallet link */}
+        <TouchableOpacity
+          style={styles.loginLink}
+          onPress={() => router.replace('/(auth)/login')}
+        >
+          <Text style={styles.loginLinkText}>
+            Already have an account?{' '}
+            <Text style={styles.loginLinkAccent}>Sign in →</Text>
+          </Text>
+        </TouchableOpacity>
+
+        {/* Dev shortcut — tap 1 of 3 */}
         <DevShortcut
           label="Skip seed phrase setup with dev mnemonic (tap 1 of 3)"
           actionLabel="Use Dev Seed Phrase"
@@ -107,65 +147,73 @@ export default function OnboardingIndex() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg },
-  header: { alignItems: 'center', gap: SPACING.sm },
-  logo: { fontSize: 48, color: COLORS.primary },
+  scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxl },
+
+  header: { alignItems: 'center', gap: SPACING.xs, paddingVertical: SPACING.md },
+  logo: { fontSize: 52, color: COLORS.primary },
   title: {
-    fontSize: FONT_SIZE.xxl,
+    fontSize: FONT_SIZE.xxxl,
     color: COLORS.text,
     fontWeight: '800',
-    textAlign: 'center',
+    letterSpacing: -1,
   },
-  subtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, textAlign: 'center' },
+
   notice: {
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderLeftWidth: 3,
     borderLeftColor: COLORS.warning,
-    gap: SPACING.sm,
   },
-  noticeTitle: {
-    color: COLORS.warning,
-    fontWeight: '700',
-    fontSize: FONT_SIZE.sm,
-  },
-  noticeText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.sm,
-    lineHeight: 20,
-  },
+  noticeText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, lineHeight: 18 },
+
   sectionLabel: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
+    marginTop: SPACING.sm,
   },
+
   card: {
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primary + '55',
     padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.md,
   },
-  cardIcon: { fontSize: 32 },
-  cardBody: { gap: SPACING.xs },
-  cardTitle: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.lg,
-    fontWeight: '700',
+  cardSecondary: {
+    borderColor: COLORS.secondary + '55',
   },
-  cardDesc: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.sm,
-    lineHeight: 20,
+  cardOutline: {
+    borderColor: COLORS.border,
   },
-  cardBtn: { alignSelf: 'flex-start' },
+  cardDisabled: {
+    opacity: 0.5,
+  },
+  cardLeft: { flexShrink: 0 },
+  cardIcon: { fontSize: 28 },
+  cardBody: { flex: 1, gap: 3 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, flexWrap: 'wrap' },
+  cardTitle: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  cardTitleDisabled: { color: COLORS.textMuted },
+  cardDesc: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, lineHeight: 17 },
+  cardChevron: { color: COLORS.textMuted, fontSize: 22, flexShrink: 0 },
+
+  badge: {
+    backgroundColor: COLORS.warning + '33',
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeText: { color: COLORS.warning, fontSize: 9, fontWeight: '700' },
+
+  loginLink: { alignItems: 'center', paddingVertical: SPACING.sm },
+  loginLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
+  loginLinkAccent: { color: COLORS.primary, fontWeight: '700' },
 });

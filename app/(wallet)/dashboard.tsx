@@ -243,6 +243,7 @@ export default function Dashboard() {
     setPrices,
     setPriceChanges,
     setPricesLoading,
+    lock,
   } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -317,8 +318,17 @@ export default function Dashboard() {
                 {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
             ) : null}
-            <View style={styles.custodyBadge}>
-              <Text style={styles.custodyText}>🔐 Self-custody</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.custodyBadge}>
+                <Text style={styles.custodyText}>🔐 Self-custody</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.lockBtn}
+                onPress={() => { lock(); router.replace('/(auth)/unlock'); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.lockBtnText}>🔒 Lock</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -380,6 +390,7 @@ const styles = StyleSheet.create({
   username: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: '800' },
   statusCol: { alignItems: 'flex-end', gap: SPACING.xs },
   statusText: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   custodyBadge: {
     backgroundColor: '#0A1A12',
     borderRadius: BORDER_RADIUS.full,
@@ -389,6 +400,15 @@ const styles = StyleSheet.create({
     borderColor: COLORS.success + '44',
   },
   custodyText: { color: COLORS.success, fontSize: 10, fontWeight: '600' },
+  lockBtn: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  lockBtnText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600' },
 
   section: { gap: SPACING.sm },
   sectionLabel: {

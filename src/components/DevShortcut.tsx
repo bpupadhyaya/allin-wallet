@@ -1,12 +1,12 @@
 /**
- * DevShortcut — Rendered ONLY when __DEV__ is true.
+ * DevShortcut — shown when __DEV__ is true OR when app.json extra.devMode is true.
  *
- * Shows a clearly-styled orange banner with a shortcut action button.
- * This component renders nothing in production builds.
+ * For release test builds set  "extra": { "devMode": true }  in app.json.
+ * Set  "devMode": false  (or remove the key) before shipping to production.
  */
-
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Constants from 'expo-constants';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 
 interface DevShortcutProps {
@@ -15,8 +15,13 @@ interface DevShortcutProps {
   onAction: () => void;
 }
 
+function isDevModeEnabled(): boolean {
+  if (__DEV__) return true;
+  return Constants.expoConfig?.extra?.devMode === true;
+}
+
 export function DevShortcut({ label, actionLabel, onAction }: DevShortcutProps) {
-  if (!__DEV__) return null;
+  if (!isDevModeEnabled()) return null;
 
   return (
     <View style={styles.banner}>

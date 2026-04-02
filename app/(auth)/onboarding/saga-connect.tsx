@@ -1,12 +1,8 @@
 /**
- * Solana Seeker / Saga — connect via Mobile Wallet Adapter.
+ * Solana Seeker / Saga — connect via Mobile Wallet Adapter v2.
  *
- * The Mobile Wallet Adapter (MWA) protocol lets dApps request signing
- * from the phone's secure hardware key without exposing the private key.
- * After connecting, the user still sets up username/password/PIN for
- * app-level security.
- *
- * Note: MWA is Android-only. iOS will show an info screen.
+ * Uses the Seed Vault's non-extractable hardware key. Android-only.
+ * After connecting, the user still sets up username/password/PIN.
  */
 import React, { useState } from 'react';
 import {
@@ -16,6 +12,7 @@ import {
   ScrollView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,28 +24,29 @@ export default function SagaConnect() {
   const { setPendingSagaPubkey } = useAppStore();
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
-  const [pubkey, setPubkey] = useState('');
+  const [address, setAddress] = useState('');
+  const [error, setError] = useState('');
 
   async function handleConnect() {
     if (Platform.OS !== 'android') {
       Alert.alert(
         'Android Only',
-        'Solana Seeker / Saga hardware key is only available on Android. Please use seed phrase wallet on this device.',
+        'Solana Seeker / Saga hardware key requires an Android device with the Seed Vault app installed.',
       );
       return;
     }
 
     setConnecting(true);
+    setError('');
+
     try {
-      // Dynamic import to avoid crashing on iOS (package only installs on Android)
-      // In production, install: @solana-mobile/mobile-wallet-adapter-protocol
-      // and @solana-mobile/wallet-adapter-mobile
+      // Dynamic import keeps the bundle valid on iOS where the package is absent
       const { transact } = await import(
         '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
-      );
+      ) as { transact: Function };
 
-      await transact(async (wallet) => {
-        const { accounts } = await wallet.authorize({
+      const result = await transact(async (wallet: any) => {
+        const authResult = await wallet.authorize({
           cluster: 'mainnet-beta',
           identity: {
             name: 'AllIn Wallet',
@@ -56,16 +54,30 @@ export default function SagaConnect() {
             icon: 'favicon.ico',
           },
         });
-
-        if (accounts.length > 0) {
-          setPubkey(accounts[0].address);
-          setPendingSagaPubkey(accounts[0].address);
-          setConnected(true);
-        }
+        return authResult;
       });
+
+      // MWA v1 and v2 both expose accounts[0].address (base58 string)
+      const accounts = result?.accounts ?? result?.selectedAccount ? [result.selectedAccount] : [];
+      const account = accounts[0];
+
+      if (!account?.address) {
+        throw new Error('No account returned from Seed Vault. Make sure Seed Vault is set up on your Seeker.');
+      }
+
+      setAddress(account.address);
+      setPendingSagaPubkey(account.address);
+      setConnected(true);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Connection failed';
-      Alert.alert('Connection Failed', `${msg}\n\nMake sure Seed Vault is unlocked on your Solana phone.`);
+      const msg = e instanceof Error ? e.message : String(e);
+
+      if (msg.includes('No WalletActivity') || msg.includes('no wallet')) {
+        setError('Seed Vault app not found. Please install the Seed Vault app from the Solana Saga / Seeker app store.');
+      } else if (msg.includes('USER_DECLINED') || msg.includes('declined') || msg.includes('cancel')) {
+        setError('Authorization cancelled. Tap "Connect" to try again.');
+      } else {
+        setError(msg || 'Connection failed. Make sure Seed Vault is unlocked.');
+      }
     } finally {
       setConnecting(false);
     }
@@ -74,65 +86,83 @@ export default function SagaConnect() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Connect Saga / Seeker</Text>
+
+        {/* Header */}
+        <Text style={styles.title}>Solana Seeker / Saga</Text>
         <Text style={styles.subtitle}>
-          Connect your Solana phone's secure hardware key to use it as your
-          Solana wallet address.
+          Use your phone's secure hardware key as your Solana wallet.
+          Your private key never leaves the Seed Vault.
         </Text>
 
+        {/* Info box */}
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>ℹ️ How it works</Text>
           <Text style={styles.infoText}>
-            • Your Solana Seeker or Saga phone has a Secure Element (Seed Vault)
-            that stores a non-extractable private key.{'\n'}
-            • AllIn Wallet connects to it via the Mobile Wallet Adapter (MWA)
-            standard — your private key never leaves the hardware.{'\n'}
-            • You will still create a username, password, and PIN for
-            additional app-level security.{'\n'}
-            • BTC and ETH wallets are not available with the phone key; only
-            the Solana address will be active.
+            {'• Your Seeker / Saga has a Secure Element (Seed Vault) with a non-extractable key.\n'}
+            {'• AllIn connects via the Mobile Wallet Adapter — your key stays in hardware.\n'}
+            {'• You will still create a username, password, and PIN for app-level security.\n'}
+            {'• Only Solana (SOL, USDC, USDT) is available with this method — BTC/ETH require a seed phrase.'}
           </Text>
         </View>
 
-        {Platform.OS !== 'android' ? (
+        {/* iOS guard */}
+        {Platform.OS !== 'android' && (
           <View style={styles.iosNotice}>
             <Text style={styles.iosNoticeText}>
-              📱 Solana Seeker / Saga is Android-only.{'\n'}
-              Please use the Seed Phrase option on iOS.
+              📱 Solana Seeker / Saga is Android-only.
+              Use the Seed Phrase option on iOS.
             </Text>
+          </View>
+        )}
+
+        {/* Error */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>⚠ {error}</Text>
           </View>
         ) : null}
 
-        {connected ? (
+        {/* Connecting spinner */}
+        {connecting && (
+          <View style={styles.spinnerRow}>
+            <ActivityIndicator color={COLORS.secondary} size="small" />
+            <Text style={styles.spinnerText}>Waiting for Seed Vault…</Text>
+          </View>
+        )}
+
+        {/* Success */}
+        {connected && (
           <View style={styles.successBox}>
             <Text style={styles.successTitle}>✅ Connected!</Text>
-            <Text style={styles.pubkeyLabel}>Solana Address:</Text>
-            <Text style={styles.pubkey} numberOfLines={1} ellipsizeMode="middle">
-              {pubkey}
+            <Text style={styles.addrLabel}>Solana Address:</Text>
+            <Text style={styles.addr} numberOfLines={1} ellipsizeMode="middle">
+              {address}
             </Text>
           </View>
-        ) : null}
+        )}
 
+        {/* Actions */}
         {!connected ? (
           <Button
-            title={connecting ? 'Connecting...' : 'Connect Solana Phone Key'}
+            title={connecting ? 'Connecting…' : 'Connect Seed Vault'}
             onPress={handleConnect}
             loading={connecting}
-            disabled={Platform.OS !== 'android'}
+            disabled={Platform.OS !== 'android' || connecting}
+            variant="secondary"
           />
         ) : (
           <Button
-            title="Continue to Credentials Setup"
+            title="Continue to Account Setup →"
             onPress={() => router.push('/(auth)/onboarding/credentials')}
-            variant="secondary"
           />
         )}
 
         <Button
-          title="← Use Seed Phrase Instead"
+          title="← Back"
           variant="outline"
           onPress={() => router.back()}
         />
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -140,7 +170,8 @@ export default function SagaConnect() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg },
+  scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxl },
+
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
@@ -158,19 +189,12 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: COLORS.secondary,
     gap: SPACING.sm,
   },
-  infoTitle: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-    fontSize: FONT_SIZE.sm,
-  },
-  infoText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.sm,
-    lineHeight: 20,
-  },
+  infoTitle: { color: COLORS.secondary, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  infoText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, lineHeight: 20 },
+
   iosNotice: {
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.md,
@@ -178,26 +202,36 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: COLORS.warning,
   },
-  iosNoticeText: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.sm,
-    lineHeight: 20,
+  iosNoticeText: { color: COLORS.warning, fontSize: FONT_SIZE.sm, lineHeight: 20 },
+
+  errorBox: {
+    backgroundColor: COLORS.danger + '22',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.danger + '66',
   },
+  errorText: { color: COLORS.danger, fontSize: FONT_SIZE.sm, lineHeight: 20 },
+
+  spinnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+  },
+  spinnerText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
+
   successBox: {
     backgroundColor: '#0A1A12',
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.success,
-    gap: SPACING.sm,
+    gap: SPACING.xs,
   },
-  successTitle: {
-    color: COLORS.success,
-    fontSize: FONT_SIZE.lg,
-    fontWeight: '700',
-  },
-  pubkeyLabel: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
-  pubkey: {
+  successTitle: { color: COLORS.success, fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  addrLabel: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
+  addr: {
     color: COLORS.text,
     fontSize: FONT_SIZE.sm,
     fontFamily: 'monospace',

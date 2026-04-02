@@ -67,6 +67,15 @@ export default function SeedGenerate() {
 
         <Button title="I've Written It Down — Continue" onPress={handleContinue} />
 
+        <Button
+          title="Cancel"
+          variant="outline"
+          onPress={() => {
+            setPendingMnemonic(null);
+            router.back();
+          }}
+        />
+
         <Text style={styles.footerNote}>
           The next step will ask you to confirm these words.
         </Text>

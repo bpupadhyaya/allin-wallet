@@ -44,6 +44,7 @@ export interface WcRequest {
 interface AppState {
   // ── Auth ──────────────────────────────────────────────────────────────────
   isAuthenticated: boolean;
+  isLocked: boolean;
   username: string | null;
   hasWallet: boolean;
   walletType: WalletType | null;
@@ -92,11 +93,14 @@ interface AppState {
   setWcInitialized: (v: boolean) => void;
   setSlippage: (pct: number) => void;
   setBiometricEnabled: (v: boolean) => void;
+  lock: () => void;
+  unlock: () => void;
   logout: () => void;
 }
 
 export const useAppStore = create<AppState>()((set) => ({
   isAuthenticated: false,
+  isLocked: false,
   username: null,
   hasWallet: false,
   walletType: null,
@@ -139,9 +143,12 @@ export const useAppStore = create<AppState>()((set) => ({
   setWcInitialized: (v) => set({ wcInitialized: v }),
   setSlippage: (pct) => set({ slippagePct: pct }),
   setBiometricEnabled: (v) => set({ biometricEnabled: v }),
+  lock: () => set({ isLocked: true }),
+  unlock: () => set({ isLocked: false }),
   logout: () =>
     set({
       isAuthenticated: false,
+      isLocked: false,
       username: null,
       pendingMnemonic: null,
       pendingSagaPubkey: null,

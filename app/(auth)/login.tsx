@@ -236,6 +236,17 @@ export default function LoginScreen() {
           actionLabel="Dev Login (1 tap)"
           onAction={handleDevLogin}
         />
+
+        {/* Create / restore wallet link */}
+        <TouchableOpacity
+          style={styles.createLink}
+          onPress={() => router.replace('/(auth)/onboarding')}
+        >
+          <Text style={styles.createLinkText}>
+            New here?{' '}
+            <Text style={styles.createLinkAccent}>Create or import a wallet →</Text>
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -310,4 +321,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     lineHeight: 18,
   },
+  createLink: { alignItems: 'center', paddingVertical: SPACING.sm },
+  createLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
+  createLinkAccent: { color: COLORS.primary, fontWeight: '700' },
 });

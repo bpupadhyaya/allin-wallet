@@ -15,7 +15,7 @@ import { useAppStore } from '../src/store/appStore';
 import { SESSION_TIMEOUT_MS } from '../src/constants/config';
 
 export default function RootLayout() {
-  const { isAuthenticated, logout } = useAppStore();
+  const { isAuthenticated, lock } = useAppStore();
   const bgTimestamp = useRef<number | null>(null);
 
   // ── Session timeout on app background ─────────────────────────────────────
@@ -27,8 +27,8 @@ export default function RootLayout() {
         if (bgTimestamp.current !== null && isAuthenticated) {
           const elapsed = Date.now() - bgTimestamp.current;
           if (elapsed > SESSION_TIMEOUT_MS) {
-            logout();
-            router.replace('/(auth)/login');
+            lock();
+            router.replace('/(auth)/unlock');
           }
         }
         bgTimestamp.current = null;
@@ -37,7 +37,7 @@ export default function RootLayout() {
 
     const sub = AppState.addEventListener('change', handleAppStateChange);
     return () => sub.remove();
-  }, [isAuthenticated, logout]);
+  }, [isAuthenticated, lock]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

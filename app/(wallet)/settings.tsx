@@ -67,6 +67,7 @@ function SettingRow({
 export default function Settings() {
   const {
     logout,
+    lock,
     username,
     walletType,
     slippagePct,
@@ -98,16 +99,34 @@ export default function Settings() {
   }
 
   function handleLock() {
-    Alert.alert('Lock Wallet', 'Lock and return to the login screen?', [
+    Alert.alert('Lock Wallet', 'Lock wallet and require PIN to re-enter?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Lock',
         onPress: () => {
-          logout();
-          router.replace('/(auth)/login');
+          lock();
+          router.replace('/(auth)/unlock');
         },
       },
     ]);
+  }
+
+  function handleSignOut() {
+    Alert.alert(
+      'Sign Out',
+      'Sign out completely? You will need your credentials or seed phrase to restore access.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            router.replace('/(auth)/onboarding');
+          },
+        },
+      ],
+    );
   }
 
   function handleClearHistory() {
@@ -160,6 +179,13 @@ export default function Settings() {
           <View style={styles.card}>
             <SettingRow icon="👤" label="Username" sub={username ?? '—'} />
             <SettingRow icon="🔑" label="Wallet Type" sub={walletType ?? '—'} />
+            <SettingRow
+              icon="🚪"
+              label="Sign Out"
+              sub="Remove this account from the app"
+              onPress={handleSignOut}
+              danger
+            />
           </View>
         </View>
 
