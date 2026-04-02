@@ -11,12 +11,13 @@ export default function WalletLayout() {
           backgroundColor: COLORS.bgSecondary,
           borderTopColor: COLORS.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 4,
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       }}
     >
       <Tabs.Screen
@@ -34,6 +35,24 @@ export default function WalletLayout() {
           title: 'Swap',
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 20, color }}>⇄</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="receive"
+        options={{
+          title: 'Receive',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>↓</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="send"
+        options={{
+          title: 'Send',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>↑</Text>
           ),
         }}
       />
