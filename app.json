@@ -28,6 +28,12 @@
         {
           "faceIDPermission": "Use Face ID to unlock your wallet"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AllIn Wallet to use the camera to scan WalletConnect QR codes."
+        }
       ]
     ],
     "experiments": {

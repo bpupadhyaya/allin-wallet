@@ -12,9 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useAppStore } from '../../src/store/appStore';
 import { fetchAllBalances } from '../../src/services/balance';
-import { fetchPrices, formatUsd, toUsd, isDepeggedStable } from '../../src/services/prices';
+import { fetchPrices, formatUsd, formatChange, toUsd, isDepeggedStable } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { GasFeeBar } from '../../src/components/GasFeeBar';
+import { AllocationChart } from '../../src/components/AllocationChart';
 
 // ─── Portfolio total banner ───────────────────────────────────────────────────
 
@@ -52,10 +54,11 @@ const bannerStyles = StyleSheet.create({
 // ─── Coin row ─────────────────────────────────────────────────────────────────
 
 function CoinRow({ symbol }: { symbol: CoinSymbol }) {
-  const { balances, prices } = useAppStore();
+  const { balances, prices, priceChanges } = useAppStore();
   const coin = COINS[symbol];
   const balance = balances[symbol];
   const price = prices[symbol];
+  const change = priceChanges[symbol];
   const usdValue = toUsd(balance, price);
   const depegged = isDepeggedStable(symbol, price);
 
@@ -72,6 +75,8 @@ function CoinRow({ symbol }: { symbol: CoinSymbol }) {
       : `$${price.toFixed(6)}`
     : '—';
 
+  const changeColor = change > 0 ? COLORS.success : change < 0 ? COLORS.danger : COLORS.textMuted;
+
   return (
     <View style={rowStyles.row}>
       <View style={[rowStyles.icon, { backgroundColor: coin.color + '22' }]}>
@@ -87,7 +92,14 @@ function CoinRow({ symbol }: { symbol: CoinSymbol }) {
             </View>
           )}
         </View>
-        <Text style={rowStyles.price}>{priceDisplay}</Text>
+        <View style={rowStyles.priceRow}>
+          <Text style={rowStyles.price}>{priceDisplay}</Text>
+          {price > 0 && (
+            <Text style={[rowStyles.change, { color: changeColor }]}>
+              {formatChange(change)}
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={rowStyles.balanceCol}>
@@ -126,7 +138,9 @@ const rowStyles = StyleSheet.create({
     paddingVertical: 1,
   },
   depegText: { color: COLORS.danger, fontSize: 9, fontWeight: '700' },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   price: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
+  change: { fontSize: FONT_SIZE.xs, fontWeight: '600' },
   balanceCol: { alignItems: 'flex-end', gap: 2 },
   balance: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: '700' },
   usd: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs },
@@ -227,6 +241,7 @@ export default function Dashboard() {
     setBalances,
     setBalancesLoading,
     setPrices,
+    setPriceChanges,
     setPricesLoading,
   } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
@@ -251,7 +266,10 @@ export default function Dashboard() {
     setPricesLoading(true);
     jobs.push(
       fetchPrices()
-        .then(setPrices)
+        .then(({ prices, changes }) => {
+          setPrices(prices);
+          setPriceChanges(changes);
+        })
         .catch(() => {/* keep last prices */})
         .finally(() => setPricesLoading(false)),
     );
@@ -311,6 +329,9 @@ export default function Dashboard() {
         {/* Quick actions */}
         <QuickActions />
 
+        {/* Gas fee bar */}
+        <GasFeeBar />
+
         {/* Assets */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Assets</Text>
@@ -334,6 +355,9 @@ export default function Dashboard() {
             {addresses.sol ? <AddressCard chain="solana" address={addresses.sol} /> : null}
           </View>
         )}
+
+        {/* Portfolio allocation chart */}
+        <AllocationChart />
 
         {/* Security reminder */}
         <View style={styles.caution}>

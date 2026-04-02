@@ -66,6 +66,15 @@ export default function WalletLayout() {
         }}
       />
       <Tabs.Screen
+        name="walletconnect"
+        options={{
+          title: 'WalletConnect',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 18, color }}>🔗</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',

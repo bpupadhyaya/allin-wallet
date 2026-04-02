@@ -74,6 +74,23 @@ export default function OnboardingIndex() {
           />
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.cardIcon}>🔄</Text>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>Import Existing Wallet</Text>
+            <Text style={styles.cardDesc}>
+              Already have a BIP-39 seed phrase? Enter your 12 or 24 words to
+              restore your existing BTC, ETH, and SOL accounts.
+            </Text>
+          </View>
+          <Button
+            title="Import"
+            variant="outline"
+            onPress={() => router.push('/(auth)/onboarding/import')}
+            style={styles.cardBtn}
+          />
+        </View>
+
         {/* Dev shortcut — pre-fill seed phrase and skip to credentials */}
         <DevShortcut
           label="Skip seed phrase setup with dev mnemonic (tap 1 of 3)"

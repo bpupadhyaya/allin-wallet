@@ -24,6 +24,9 @@ export const LIFI_API_KEY = process.env.EXPO_PUBLIC_LIFI_API_KEY || '';
 // THORChain — used for native BTC swaps.
 export const THORCHAIN_API = 'https://thornode.ninerealms.com';
 
+// WalletConnect v2 — register at https://cloud.walletconnect.com
+export const WC_PROJECT_ID = process.env.EXPO_PUBLIC_WC_PROJECT_ID || '';
+
 // ─── Dev / Test shortcuts (NEVER shipped in production builds) ───────────────
 // These are BIP-39 all-zeros test vectors — they have no real funds.
 export const DEV_MNEMONIC =
