@@ -25,7 +25,7 @@ export default function WalletLayout() {
         options={{
           title: 'Portfolio',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>⬡</Text>
+            <Text style={{ fontSize: 18, color }}>⬡</Text>
           ),
         }}
       />
@@ -34,7 +34,7 @@ export default function WalletLayout() {
         options={{
           title: 'Swap',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>⇄</Text>
+            <Text style={{ fontSize: 18, color }}>⇄</Text>
           ),
         }}
       />
@@ -43,7 +43,7 @@ export default function WalletLayout() {
         options={{
           title: 'Receive',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>↓</Text>
+            <Text style={{ fontSize: 18, color }}>↓</Text>
           ),
         }}
       />
@@ -52,7 +52,16 @@ export default function WalletLayout() {
         options={{
           title: 'Send',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>↑</Text>
+            <Text style={{ fontSize: 18, color }}>↑</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 18, color }}>🕐</Text>
           ),
         }}
       />
@@ -61,7 +70,7 @@ export default function WalletLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>⚙</Text>
+            <Text style={{ fontSize: 18, color }}>⚙</Text>
           ),
         }}
       />

@@ -4,20 +4,29 @@ import { ZERO_BALANCES } from '../services/balance';
 import type { Prices } from '../services/prices';
 import { ZERO_PRICES } from '../services/prices';
 import type { WalletType, WalletAddresses } from '../services/storage';
-import type { SwapResult } from '../services/swap/executor';
 import type { CoinSymbol } from '../constants/coins';
 
 export interface TxRecord {
   id: string;
+  /** 'swap' = cross-coin swap; 'send' = wallet-to-address transfer */
+  type: 'swap' | 'send';
   fromCoin: CoinSymbol;
+  /** For sends, equals fromCoin */
   toCoin: CoinSymbol;
   fromAmount: number;
+  /** For sends, equals fromAmount (minus fee) */
   toAmount: number;
+  /** Recipient address — only set for sends */
+  toAddress?: string;
   txHash: string;
   status: 'pending' | 'confirmed' | 'failed';
   explorerUrl: string;
   timestamp: number;
-  route: string;
+  /** Swap route description, e.g. "1inch → Stargate" */
+  route?: string;
+  /** Fee in native coin of the sending chain */
+  feeCoin?: string;
+  feeAmount?: number;
 }
 
 interface AppState {
@@ -37,8 +46,14 @@ interface AppState {
   balancesLoading: boolean;
   prices: Prices;
   pricesLoading: boolean;
-  /** Last confirmed/pending swap transactions (most recent first) */
+
+  // ── Transaction history (in-memory; persisted separately in AsyncStorage) ─
   recentTxs: TxRecord[];
+
+  // ── User preferences ──────────────────────────────────────────────────────
+  /** Swap slippage percentage, e.g. 0.5 means 0.5% */
+  slippagePct: number;
+  biometricEnabled: boolean;
 
   // ── Actions ───────────────────────────────────────────────────────────────
   setAuthenticated: (val: boolean, username?: string) => void;
@@ -51,6 +66,9 @@ interface AppState {
   setPrices: (p: Prices) => void;
   setPricesLoading: (v: boolean) => void;
   addTxRecord: (tx: TxRecord) => void;
+  setRecentTxs: (txs: TxRecord[]) => void;
+  setSlippage: (pct: number) => void;
+  setBiometricEnabled: (v: boolean) => void;
   logout: () => void;
 }
 
@@ -67,6 +85,8 @@ export const useAppStore = create<AppState>()((set) => ({
   prices: ZERO_PRICES,
   pricesLoading: false,
   recentTxs: [],
+  slippagePct: 0.5,
+  biometricEnabled: false,
 
   setAuthenticated: (val, username) =>
     set({ isAuthenticated: val, username: username ?? null }),
@@ -83,7 +103,11 @@ export const useAppStore = create<AppState>()((set) => ({
   setPricesLoading: (v) => set({ pricesLoading: v }),
 
   addTxRecord: (tx) =>
-    set((s) => ({ recentTxs: [tx, ...s.recentTxs].slice(0, 50) })),
+    set((s) => ({ recentTxs: [tx, ...s.recentTxs].slice(0, 100) })),
+
+  setRecentTxs: (txs) => set({ recentTxs: txs }),
+  setSlippage: (pct) => set({ slippagePct: pct }),
+  setBiometricEnabled: (v) => set({ biometricEnabled: v }),
 
   logout: () =>
     set({

@@ -5,12 +5,40 @@ if (typeof global.Buffer === 'undefined') {
   (global as typeof global & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
-import { Stack } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useAppStore } from '../src/store/appStore';
+import { SESSION_TIMEOUT_MS } from '../src/constants/config';
 
 export default function RootLayout() {
+  const { isAuthenticated, logout } = useAppStore();
+  const bgTimestamp = useRef<number | null>(null);
+
+  // ── Session timeout on app background ─────────────────────────────────────
+  useEffect(() => {
+    function handleAppStateChange(state: AppStateStatus) {
+      if (state === 'background' || state === 'inactive') {
+        bgTimestamp.current = Date.now();
+      } else if (state === 'active') {
+        if (bgTimestamp.current !== null && isAuthenticated) {
+          const elapsed = Date.now() - bgTimestamp.current;
+          if (elapsed > SESSION_TIMEOUT_MS) {
+            logout();
+            router.replace('/(auth)/login');
+          }
+        }
+        bgTimestamp.current = null;
+      }
+    }
+
+    const sub = AppState.addEventListener('change', handleAppStateChange);
+    return () => sub.remove();
+  }, [isAuthenticated, logout]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

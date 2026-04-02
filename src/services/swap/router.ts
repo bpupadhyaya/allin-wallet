@@ -59,11 +59,13 @@ function toThorAsset(coin: (typeof COINS)[CoinSymbol]): string {
 /**
  * Fetch the best swap quote for the given pair and amount.
  * Automatically routes to the correct provider.
+ * @param slippagePct Slippage tolerance as a percentage, e.g. 0.5 = 0.5% (default)
  */
 export async function getSwapQuote(
   fromCoin: CoinSymbol,
   toCoin: CoinSymbol,
   fromAmount: number,
+  slippagePct = 0.5,
 ): Promise<SwapQuote> {
   if (fromAmount <= 0) throw new Error('Amount must be greater than zero');
 
@@ -72,10 +74,10 @@ export async function getSwapQuote(
 
   // BTC always goes through THORChain (native UTXO chain, Li.Fi wraps it)
   if (from.chain === 'bitcoin' || to.chain === 'bitcoin') {
-    return getThorchainQuote(fromCoin, toCoin, fromAmount);
+    return getThorchainQuote(fromCoin, toCoin, fromAmount, slippagePct);
   }
 
-  return getLifiQuote(fromCoin, toCoin, fromAmount);
+  return getLifiQuote(fromCoin, toCoin, fromAmount, slippagePct);
 }
 
 // ─── Li.Fi ──────────────────────────────────────────────────────────────────
@@ -84,6 +86,7 @@ async function getLifiQuote(
   fromCoin: CoinSymbol,
   toCoin: CoinSymbol,
   fromAmount: number,
+  slippagePct = 0.5,
 ): Promise<SwapQuote> {
   const from = COINS[fromCoin];
   const to = COINS[toCoin];
@@ -116,7 +119,7 @@ async function getLifiQuote(
       fromToken,
       toToken,
       fromAmount: amountWei,
-      slippage: 0.005,
+      slippage: slippagePct / 100,
     },
     headers,
     timeout: 15000,
@@ -152,6 +155,7 @@ async function getThorchainQuote(
   fromCoin: CoinSymbol,
   toCoin: CoinSymbol,
   fromAmount: number,
+  slippagePct = 0.5,
 ): Promise<SwapQuote> {
   const from = COINS[fromCoin];
   const to = COINS[toCoin];

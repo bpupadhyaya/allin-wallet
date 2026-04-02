@@ -22,6 +22,7 @@ import { useAppStore } from '../../src/store/appStore';
 import { getSwapQuote, type SwapQuote } from '../../src/services/swap/router';
 import { executeSwap } from '../../src/services/swap/executor';
 import type { SwapResult } from '../../src/services/swap/executor';
+import { saveTxRecord } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
@@ -225,7 +226,7 @@ const success = StyleSheet.create({
 // ─── Main swap screen ─────────────────────────────────────────────────────────
 
 export default function SwapScreen() {
-  const { balances, prices, addresses, addTxRecord } = useAppStore();
+  const { balances, prices, addresses, addTxRecord, slippagePct } = useAppStore();
   const [fromCoin, setFromCoin] = useState<CoinSymbol>('SOL');
   const [toCoin, setToCoin] = useState<CoinSymbol>('USDC_SOL');
   const [amount, setAmount] = useState('');
@@ -262,7 +263,7 @@ export default function SwapScreen() {
     setQuoting(true);
     setQuote(null);
     try {
-      const q = await getSwapQuote(fromCoin, toCoin, num);
+      const q = await getSwapQuote(fromCoin, toCoin, num, slippagePct);
       setQuote(q);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to fetch quote';
@@ -289,8 +290,9 @@ export default function SwapScreen() {
               const btcAddr = fromCoin === 'BTC' ? addresses?.btc : undefined;
               const res = await executeSwap(quote, btcAddr);
               setResult(res);
-              addTxRecord({
+              const record = {
                 id: res.txHash,
+                type: 'swap' as const,
                 fromCoin,
                 toCoin,
                 fromAmount: quote.fromAmount,
@@ -300,7 +302,9 @@ export default function SwapScreen() {
                 explorerUrl: res.explorerUrl,
                 timestamp: Date.now(),
                 route: quote.route,
-              });
+              };
+              addTxRecord(record);
+              await saveTxRecord(record);
             } catch (e: unknown) {
               const msg = e instanceof Error ? e.message : 'Swap failed';
               Alert.alert('Swap Failed', msg);
@@ -394,7 +398,7 @@ export default function SwapScreen() {
           </View>
         </View>
 
-        <Text style={styles.slippageNote}>Default slippage: 0.5%</Text>
+        <Text style={styles.slippageNote}>Slippage: {slippagePct}% · Adjust in Settings</Text>
 
         {/* Quote result */}
         {quote && !result ? (
