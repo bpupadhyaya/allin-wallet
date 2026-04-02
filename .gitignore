@@ -10,9 +10,14 @@ expo-env.d.ts
 .env.local
 .env.*.local
 
-# ── Native build artefacts ────────────────────────────────────────────────────
-android/
-ios/
+# ── Native build artefacts (keep project files, ignore build output) ──────────
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+ios/build/
+ios/Pods/
+ios/DerivedData/
 *.jks
 *.p8
 *.p12
