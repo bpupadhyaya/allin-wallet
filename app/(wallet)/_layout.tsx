@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../src/constants/theme';
 
 export default function WalletLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -11,13 +13,14 @@ export default function WalletLayout() {
           backgroundColor: COLORS.bgSecondary,
           borderTopColor: COLORS.border,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 10,
-          paddingTop: 4,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom + 2,
+          paddingTop: 2,
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 9, fontWeight: '600' },
+        tabBarIconStyle: { marginBottom: -2 },
       }}
     >
       <Tabs.Screen
@@ -25,7 +28,7 @@ export default function WalletLayout() {
         options={{
           title: 'Portfolio',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>⬡</Text>
+            <Text style={{ fontSize: 16, color }}>⬡</Text>
           ),
         }}
       />
@@ -34,7 +37,7 @@ export default function WalletLayout() {
         options={{
           title: 'Swap',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>⇄</Text>
+            <Text style={{ fontSize: 16, color }}>⇄</Text>
           ),
         }}
       />
@@ -43,7 +46,7 @@ export default function WalletLayout() {
         options={{
           title: 'Receive',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>↓</Text>
+            <Text style={{ fontSize: 16, color }}>↓</Text>
           ),
         }}
       />
@@ -52,7 +55,7 @@ export default function WalletLayout() {
         options={{
           title: 'Send',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>↑</Text>
+            <Text style={{ fontSize: 16, color }}>↑</Text>
           ),
         }}
       />
@@ -61,16 +64,16 @@ export default function WalletLayout() {
         options={{
           title: 'History',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>🕐</Text>
+            <Text style={{ fontSize: 16, color }}>🕐</Text>
           ),
         }}
       />
       <Tabs.Screen
         name="walletconnect"
         options={{
-          title: 'WalletConnect',
+          title: 'WC',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>🔗</Text>
+            <Text style={{ fontSize: 16, color }}>🔗</Text>
           ),
         }}
       />
@@ -79,7 +82,7 @@ export default function WalletLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 18, color }}>⚙</Text>
+            <Text style={{ fontSize: 16, color }}>⚙</Text>
           ),
         }}
       />

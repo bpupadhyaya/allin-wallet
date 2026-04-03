@@ -32,6 +32,12 @@ export const WC_PROJECT_ID = process.env.EXPO_PUBLIC_WC_PROJECT_ID || '';
 export const DEV_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 export const DEV_USERNAME = 'devuser';
+// Pre-derived addresses for DEV_MNEMONIC — avoids slow PBKDF2 at dev login time
+export const DEV_ADDRESSES = {
+  btc: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+  eth: '0x9858EfFD232B4033E47d90003D41EC34EcaEda94',
+  sol: '4nFZgXtZAEwbfA56LRVRdsDGNeW3U55gr5hL9c5E5de5',
+};
 export const DEV_PASSWORD = 'DevPass123!';
 export const DEV_PIN = '123456';
 

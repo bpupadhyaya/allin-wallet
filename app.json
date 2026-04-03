@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "scheme": "allinwallet",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": false,
@@ -16,6 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0A0A0F"
       },
       "package": "com.allinwallet.app"

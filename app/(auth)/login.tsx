@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -33,7 +34,7 @@ import {
   FONT_SIZE,
   BORDER_RADIUS,
 } from '../../src/constants/theme';
-import { DEV_USERNAME } from '../../src/constants/config';
+import { DEV_USERNAME, DEV_ADDRESSES } from '../../src/constants/config';
 
 type Mode = 'password' | 'pin';
 
@@ -126,14 +127,13 @@ export default function LoginScreen() {
   async function handleDevLogin() {
     setLoading(true);
     try {
-      const [addresses, history] = await Promise.all([
-        getWalletAddresses(),
-        loadTxHistory(),
-      ]);
-      if (addresses) setAddresses(addresses);
+      const history = await loadTxHistory();
+      setAddresses(DEV_ADDRESSES);
       setRecentTxs(history);
       setAuthenticated(true, DEV_USERNAME);
       router.replace('/(wallet)/dashboard');
+    } catch (e) {
+      Alert.alert('Dev Login Error', String(e));
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,11 @@ export default function LoginScreen() {
       >
         {/* Branding */}
         <View style={styles.header}>
-          <Text style={styles.logo}>⬡</Text>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.appName}>AllIn Wallet</Text>
           <Text style={styles.tagline}>Your keys. Your coins.</Text>
         </View>
@@ -261,7 +265,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: { alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
-  logo: { fontSize: 56, color: COLORS.primary },
+  logo: { width: 88, height: 88, borderRadius: 20 },
   appName: {
     fontSize: FONT_SIZE.xxxl,
     color: COLORS.text,

@@ -1,10 +1,3 @@
-// Polyfills must come before any crypto imports
-import 'react-native-get-random-values';
-import { Buffer } from 'buffer';
-if (typeof global.Buffer === 'undefined') {
-  (global as typeof global & { Buffer: typeof Buffer }).Buffer = Buffer;
-}
-
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { Stack, router } from 'expo-router';
