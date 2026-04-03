@@ -15,6 +15,8 @@ import {
   verifyPin,
   getUsername,
   getWalletAddresses,
+  saveWalletType,
+  saveWalletAddresses,
 } from '../../src/services/storage';
 import {
   isBiometricAvailable,
@@ -39,7 +41,7 @@ import { DEV_USERNAME, DEV_ADDRESSES } from '../../src/constants/config';
 type Mode = 'password' | 'pin';
 
 export default function LoginScreen() {
-  const { setAuthenticated, setAddresses, setRecentTxs } = useAppStore();
+  const { setAuthenticated, setAddresses, setRecentTxs, setHasWallet } = useAppStore();
   const [mode, setMode] = useState<Mode>('password');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -127,8 +129,13 @@ export default function LoginScreen() {
   async function handleDevLogin() {
     setLoading(true);
     try {
+      // Persist wallet type + addresses so bootstrap recognises the wallet
+      // on app restart or after sign-out.
+      await saveWalletType('seed');
+      await saveWalletAddresses(DEV_ADDRESSES);
       const history = await loadTxHistory();
       setAddresses(DEV_ADDRESSES);
+      setHasWallet(true, 'seed');
       setRecentTxs(history);
       setAuthenticated(true, DEV_USERNAME);
       router.replace('/(wallet)/dashboard');

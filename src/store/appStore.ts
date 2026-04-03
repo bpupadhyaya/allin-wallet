@@ -86,6 +86,7 @@ interface AppState {
   setPricesLoading: (v: boolean) => void;
   addTxRecord: (tx: TxRecord) => void;
   setRecentTxs: (txs: TxRecord[]) => void;
+  updateTxStatus: (txHash: string, status: TxRecord['status']) => void;
   setWcSessions: (sessions: WcSession[]) => void;
   addWcSession: (s: WcSession) => void;
   removeWcSession: (topic: string) => void;
@@ -134,6 +135,12 @@ export const useAppStore = create<AppState>()((set) => ({
   addTxRecord: (tx) =>
     set((s) => ({ recentTxs: [tx, ...s.recentTxs].slice(0, 100) })),
   setRecentTxs: (txs) => set({ recentTxs: txs }),
+  updateTxStatus: (txHash, status) =>
+    set((s) => ({
+      recentTxs: s.recentTxs.map((r) =>
+        r.txHash === txHash ? { ...r, status } : r,
+      ),
+    })),
   setWcSessions: (sessions) => set({ wcSessions: sessions }),
   addWcSession: (s) =>
     set((state) => ({ wcSessions: [...state.wcSessions, s] })),

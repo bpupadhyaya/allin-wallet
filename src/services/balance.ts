@@ -1,7 +1,20 @@
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { ethers } from 'ethers';
 import axios from 'axios';
-import { RPC } from '../constants/config';
+import { RPC, IS_DEV, DEV_ADDRESSES } from '../constants/config';
+
+// ─── Dev mock balances ────────────────────────────────────────────────────────
+// Returned instantly when the dev account is active (IS_DEV + abandon mnemonic).
+// Never compiled into production — IS_DEV is false in EAS release builds.
+const DEV_BALANCES: Balances = {
+  BTC:      0.05,    // ~$4 000 — enough to test THORChain swap minimums
+  ETH:      0.5,
+  SOL:      25,
+  USDC_SOL: 100,
+  USDT_SOL: 100,
+  USDC_ETH: 100,
+  USDT_ETH: 100,
+};
 
 export interface Balances {
   BTC: number;
@@ -40,6 +53,17 @@ export async function fetchAllBalances(addresses: {
   eth: string;
   sol: string;
 }): Promise<Balances> {
+  // In dev builds, return instant mock balances for the dev test wallet so
+  // swap / send flows can be exercised without real on-chain funds.
+  if (
+    IS_DEV &&
+    addresses.btc === DEV_ADDRESSES.btc &&
+    addresses.eth === DEV_ADDRESSES.eth &&
+    addresses.sol === DEV_ADDRESSES.sol
+  ) {
+    return { ...DEV_BALANCES };
+  }
+
   const [btcRes, ethRes, solRes] = await Promise.allSettled([
     addresses.btc ? fetchBtcBalance(addresses.btc) : Promise.resolve(0),
     addresses.eth ? fetchEthBalances(addresses.eth) : Promise.resolve(null),

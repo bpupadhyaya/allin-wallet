@@ -114,7 +114,7 @@ export default function Settings() {
   function handleSignOut() {
     Alert.alert(
       'Sign Out',
-      'Sign out completely? You will need your credentials or seed phrase to restore access.',
+      'Sign out completely? Your wallet will remain on this device — use your credentials to sign back in.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -122,7 +122,7 @@ export default function Settings() {
           style: 'destructive',
           onPress: () => {
             logout();
-            router.replace('/(auth)/onboarding');
+            router.replace('/(auth)/login');
           },
         },
       ],

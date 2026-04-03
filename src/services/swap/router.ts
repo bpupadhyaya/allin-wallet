@@ -45,11 +45,16 @@ function toThorAsset(coin: (typeof COINS)[CoinSymbol]): string {
     case 'SOL':
       return 'SOL.SOL';
     case 'USDC_ETH':
-      return `ETH.USDC-${coin.contractAddress?.toUpperCase()}`;
+      return `ETH.USDC-${coin.contractAddress!.toUpperCase()}`;
     case 'USDT_ETH':
-      return `ETH.USDT-${coin.contractAddress?.toUpperCase()}`;
+      return `ETH.USDT-${coin.contractAddress!.toUpperCase()}`;
+    case 'USDC_SOL':
+      // THORChain Solana USDC: SOL.USDC-<mint address>
+      return `SOL.USDC-${coin.contractAddress}`;
+    case 'USDT_SOL':
+      // THORChain Solana USDT: SOL.USDT-<mint address>
+      return `SOL.USDT-${coin.contractAddress}`;
     default:
-      // Solana-based tokens — THORChain may not support all; route via Li.Fi
       return coin.symbol;
   }
 }
@@ -59,13 +64,18 @@ function toThorAsset(coin: (typeof COINS)[CoinSymbol]): string {
 /**
  * Fetch the best swap quote for the given pair and amount.
  * Automatically routes to the correct provider.
- * @param slippagePct Slippage tolerance as a percentage, e.g. 0.5 = 0.5% (default)
+ *
+ * @param slippagePct Slippage tolerance as a percentage, e.g. 0.5 = 0.5%
+ * @param destinationAddress The user's receiving address on the target chain.
+ *   Required for THORChain routes — it is embedded in the swap memo so
+ *   THORChain knows where to send the output.
  */
 export async function getSwapQuote(
   fromCoin: CoinSymbol,
   toCoin: CoinSymbol,
   fromAmount: number,
   slippagePct = 0.5,
+  destinationAddress?: string,
 ): Promise<SwapQuote> {
   if (fromAmount <= 0) throw new Error('Amount must be greater than zero');
 
@@ -74,7 +84,13 @@ export async function getSwapQuote(
 
   // BTC always goes through THORChain (native UTXO chain, Li.Fi wraps it)
   if (from.chain === 'bitcoin' || to.chain === 'bitcoin') {
-    return getThorchainQuote(fromCoin, toCoin, fromAmount, slippagePct);
+    return getThorchainQuote(
+      fromCoin,
+      toCoin,
+      fromAmount,
+      slippagePct,
+      destinationAddress,
+    );
   }
 
   return getLifiQuote(fromCoin, toCoin, fromAmount, slippagePct);
@@ -107,11 +123,22 @@ async function getLifiQuote(
     estimate: {
       toAmount: string;
       executionDuration: number;
+      approvalAddress?: string;
       gasCosts?: Array<{ amountUSD: string }>;
       priceImpact?: string;
     };
+    action: {
+      fromToken: { address: string; decimals: number };
+      fromAmount: string;
+    };
     toolDetails?: { name: string };
     includedSteps?: Array<{ toolDetails: { name: string } }>;
+    transactionRequest?: {
+      to: string;
+      data: string;
+      value?: string;
+      gasLimit?: string;
+    };
   }>('https://li.quest/v1/quote', {
     params: {
       fromChain: fromChainId,
@@ -156,9 +183,17 @@ async function getThorchainQuote(
   toCoin: CoinSymbol,
   fromAmount: number,
   slippagePct = 0.5,
+  destinationAddress?: string,
 ): Promise<SwapQuote> {
   const from = COINS[fromCoin];
   const to = COINS[toCoin];
+
+  if (!destinationAddress) {
+    throw new Error(
+      'A destination address is required for THORChain swaps. ' +
+      'Please ensure your wallet is fully loaded before swapping.',
+    );
+  }
 
   const amountBase = Math.floor(fromAmount * 10 ** from.decimals);
 
@@ -174,9 +209,18 @@ async function getThorchainQuote(
       from_asset: toThorAsset(from),
       to_asset: toThorAsset(to),
       amount: amountBase,
+      destination: destinationAddress,
+      slippage_bps: Math.round(slippagePct * 100),
     },
     timeout: 15000,
   });
+
+  if (!data.inbound_address || !data.memo) {
+    throw new Error(
+      'THORChain returned an incomplete quote (missing inbound_address or memo). ' +
+      'The trading pair may not be supported. Try a different pair.',
+    );
+  }
 
   const toAmountNum =
     parseInt(data.expected_amount_out ?? '0') / 10 ** to.decimals;

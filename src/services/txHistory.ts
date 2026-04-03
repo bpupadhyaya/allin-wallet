@@ -27,6 +27,21 @@ export async function loadTxHistory(): Promise<TxRecord[]> {
   }
 }
 
+export async function updateTxRecord(
+  txHash: string,
+  updates: Partial<TxRecord>,
+): Promise<void> {
+  try {
+    const existing = await loadTxHistory();
+    const updated = existing.map((r) =>
+      r.txHash === txHash ? { ...r, ...updates } : r,
+    );
+    await AsyncStorage.setItem(KEY, JSON.stringify(updated));
+  } catch {
+    // Non-critical — swallow so callers don't need to handle it
+  }
+}
+
 export async function clearTxHistory(): Promise<void> {
   await AsyncStorage.removeItem(KEY);
 }

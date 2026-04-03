@@ -7,7 +7,7 @@
 import * as btcSigner from '@scure/btc-signer';
 import axios from 'axios';
 import { getMnemonic } from './storage';
-import { getBtcPrivateKey } from '../crypto/wallets';
+import { getBtcKeyPair } from '../crypto/wallets';
 import { fetchBtcFeeRates, estimateBtcVbytes } from './fees';
 import { RPC } from '../constants/config';
 
@@ -77,11 +77,9 @@ export async function sendBtc(params: BtcSendParams): Promise<BtcSendResult> {
 
   const changeSats = selectedTotal - amountSats - feeSats;
 
-  const btcPrivKey = await getBtcPrivateKey(mnemonic);
-  const pubKey = btcSigner.utils.pubkeyToUncompressed(
-    btcSigner.utils.privkeyToPublicKey(btcPrivKey),
-  );
-  const senderScript = btcSigner.p2wpkh(pubKey).script;
+  const { privateKey: btcPrivKey, publicKey: btcPubKey } = await getBtcKeyPair(mnemonic);
+  // p2wpkh requires a compressed 33-byte public key — btcPubKey from HDKey is already correct
+  const senderScript = btcSigner.p2wpkh(btcPubKey).script;
 
   const tx = new btcSigner.Transaction();
 

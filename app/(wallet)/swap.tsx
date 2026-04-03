@@ -22,10 +22,68 @@ import { useAppStore } from '../../src/store/appStore';
 import { getSwapQuote, type SwapQuote } from '../../src/services/swap/router';
 import { executeSwap } from '../../src/services/swap/executor';
 import type { SwapResult } from '../../src/services/swap/executor';
-import { saveTxRecord } from '../../src/services/txHistory';
+import { saveTxRecord, updateTxRecord } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+
+// ─── Slippage options ─────────────────────────────────────────────────────────
+
+const SLIPPAGE_PRESETS = [0.5, 1.0, 2.0];
+
+function SlippageSelector({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <View style={slipStyles.row}>
+      <Text style={slipStyles.label}>Slippage</Text>
+      <View style={slipStyles.pills}>
+        {SLIPPAGE_PRESETS.map((pct) => (
+          <TouchableOpacity
+            key={pct}
+            style={[slipStyles.pill, value === pct && slipStyles.pillActive]}
+            onPress={() => onChange(pct)}
+            activeOpacity={0.7}
+          >
+            <Text style={[slipStyles.pillText, value === pct && slipStyles.pillTextActive]}>
+              {pct}%
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const slipStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.bgCard,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+  },
+  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '500' },
+  pills: { flexDirection: 'row', gap: SPACING.xs },
+  pill: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.bgTertiary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  pillText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  pillTextActive: { color: COLORS.text },
+});
 
 // ─── Coin selector modal ──────────────────────────────────────────────────────
 
@@ -184,11 +242,27 @@ const qs = StyleSheet.create({
 
 // ─── Success card ─────────────────────────────────────────────────────────────
 
-function SuccessCard({ result, onDismiss }: { result: SwapResult; onDismiss: () => void }) {
+function SuccessCard({
+  result,
+  toCoin,
+  onDismiss,
+}: {
+  result: SwapResult;
+  toCoin: CoinSymbol;
+  onDismiss: () => void;
+}) {
+  const isPending = result.status === 'pending';
+  const isEth = COINS[toCoin]?.chain === 'ethereum' || result.explorerUrl.includes('etherscan');
+
   return (
     <View style={success.card}>
       <Text style={success.icon}>✅</Text>
       <Text style={success.title}>Swap Submitted!</Text>
+      {isPending && isEth && (
+        <Text style={success.pendingNote}>
+          ⏳ ETH transaction is confirming on-chain. Status will update automatically.
+        </Text>
+      )}
       <Text style={success.hash} numberOfLines={2} selectable>{result.txHash}</Text>
       <TouchableOpacity onPress={() => Linking.openURL(result.explorerUrl)}>
         <Text style={success.explorerLink}>View on explorer →</Text>
@@ -212,6 +286,12 @@ const success = StyleSheet.create({
   },
   icon: { fontSize: 48 },
   title: { color: COLORS.success, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  pendingNote: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   hash: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, fontFamily: 'monospace', textAlign: 'center' },
   explorerLink: { color: COLORS.primary, fontSize: FONT_SIZE.sm, textDecorationLine: 'underline' },
   btn: {
@@ -226,7 +306,10 @@ const success = StyleSheet.create({
 // ─── Main swap screen ─────────────────────────────────────────────────────────
 
 export default function SwapScreen() {
-  const { balances, prices, addresses, addTxRecord, slippagePct } = useAppStore();
+  const {
+    balances, prices, addresses, addTxRecord, slippagePct, setSlippage,
+    updateTxStatus,
+  } = useAppStore();
   const [fromCoin, setFromCoin] = useState<CoinSymbol>('SOL');
   const [toCoin, setToCoin] = useState<CoinSymbol>('USDC_SOL');
   const [amount, setAmount] = useState('');
@@ -242,6 +325,15 @@ export default function SwapScreen() {
   const fromBalance = balances[fromCoin];
   const fromPrice = prices[fromCoin];
   const amountUsd = amount ? toUsd(parseFloat(amount) || 0, fromPrice) : 0;
+
+  /** Resolve the user's receiving address for the destination chain. */
+  function destinationAddress(): string | undefined {
+    const chain = COINS[toCoin].chain;
+    if (chain === 'bitcoin') return addresses?.btc;
+    if (chain === 'ethereum') return addresses?.eth;
+    if (chain === 'solana') return addresses?.sol;
+    return undefined;
+  }
 
   function swapCoins() {
     setFromCoin(toCoin);
@@ -260,10 +352,22 @@ export default function SwapScreen() {
       Alert.alert('Insufficient Balance', `You only have ${fromBalance} ${fromCoin}.`);
       return;
     }
+
+    const destAddr = destinationAddress();
+    const needsDest = fromConfig.chain === 'bitcoin' || toConfig.chain === 'bitcoin';
+    if (needsDest && !destAddr) {
+      Alert.alert(
+        'Address Unavailable',
+        'Your destination wallet address could not be found. ' +
+        'Please restart the app and try again.',
+      );
+      return;
+    }
+
     setQuoting(true);
     setQuote(null);
     try {
-      const q = await getSwapQuote(fromCoin, toCoin, num, slippagePct);
+      const q = await getSwapQuote(fromCoin, toCoin, num, slippagePct, destAddr);
       setQuote(q);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to fetch quote';
@@ -288,8 +392,19 @@ export default function SwapScreen() {
             setSwapping(true);
             try {
               const btcAddr = fromCoin === 'BTC' ? addresses?.btc : undefined;
-              const res = await executeSwap(quote, btcAddr);
+
+              const res = await executeSwap(
+                quote,
+                btcAddr,
+                // Background callback for ETH tx confirmation
+                async (txHash, status) => {
+                  updateTxStatus(txHash, status);
+                  await updateTxRecord(txHash, { status });
+                },
+              );
+
               setResult(res);
+
               const record = {
                 id: res.txHash,
                 type: 'swap' as const,
@@ -335,6 +450,9 @@ export default function SwapScreen() {
             and THORChain (BTC). Never leaves your device.
           </Text>
         </View>
+
+        {/* Slippage selector */}
+        <SlippageSelector value={slippagePct} onChange={setSlippage} />
 
         {/* From */}
         <View style={styles.swapCard}>
@@ -398,8 +516,6 @@ export default function SwapScreen() {
           </View>
         </View>
 
-        <Text style={styles.slippageNote}>Slippage: {slippagePct}% · Adjust in Settings</Text>
-
         {/* Quote result */}
         {quote && !result ? (
           <QuoteCard quote={quote} prices={prices} />
@@ -407,7 +523,7 @@ export default function SwapScreen() {
 
         {/* Success */}
         {result ? (
-          <SuccessCard result={result} onDismiss={handleDismissResult} />
+          <SuccessCard result={result} toCoin={toCoin} onDismiss={handleDismissResult} />
         ) : null}
 
         {/* Price impact warning */}
@@ -551,7 +667,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   flipText: { color: COLORS.primary, fontSize: 22, fontWeight: '700' },
-  slippageNote: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, textAlign: 'center' },
   impactWarning: {
     backgroundColor: '#1A0A0A',
     borderRadius: BORDER_RADIUS.md,

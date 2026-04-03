@@ -47,7 +47,7 @@ import {
   SOL_TX_FEE,
   type BtcFeeRates,
 } from '../../src/services/fees';
-import { saveTxRecord } from '../../src/services/txHistory';
+import { saveTxRecord, updateTxRecord } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { RPC } from '../../src/constants/config';
@@ -201,7 +201,7 @@ const feeStyles = StyleSheet.create({
 // ─── Main send screen ─────────────────────────────────────────────────────────
 
 export default function SendScreen() {
-  const { balances, prices, addresses, addTxRecord } = useAppStore();
+  const { balances, prices, addresses, addTxRecord, updateTxStatus } = useAppStore();
   const [coin, setCoin] = useState<CoinSymbol>('SOL');
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -330,6 +330,19 @@ export default function SendScreen() {
           hash = tx.hash;
         }
         explorer = `https://etherscan.io/tx/${hash}`;
+
+        // Background confirmation polling — ETH blocks take ~12 s each
+        const ethHash = hash;
+        signer.provider!
+          .waitForTransaction(ethHash, 1, 10 * 60 * 1000)
+          .then(() => {
+            updateTxStatus(ethHash, 'confirmed');
+            updateTxRecord(ethHash, { status: 'confirmed' }).catch(() => {});
+          })
+          .catch(() => {
+            updateTxStatus(ethHash, 'failed');
+            updateTxRecord(ethHash, { status: 'failed' }).catch(() => {});
+          });
       } else {
         // Solana
         const keypair = await getSolKeypair(mnemonic);

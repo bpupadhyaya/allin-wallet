@@ -85,6 +85,23 @@ export async function getBtcPrivateKey(mnemonic: string): Promise<Uint8Array> {
 }
 
 /**
+ * Returns both the private key and the compressed (33-byte) public key for
+ * BTC P2WPKH signing.  HDKey.publicKey is already compressed — this is the
+ * correct input for btcSigner.p2wpkh().
+ */
+export async function getBtcKeyPair(
+  mnemonic: string,
+): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
+  const seed = await mnemonicToSeed(mnemonic);
+  const root = HDKey.fromMasterSeed(seed);
+  const btcKey = root.derive(PATHS.BTC);
+  return {
+    privateKey: btcKey.privateKey!,
+    publicKey: btcKey.publicKey!, // compressed 33-byte secp256k1 key
+  };
+}
+
+/**
  * Derive a wallet struct from a Solana Seeker/Saga public key.
  * In this case BTC and ETH are not available via the phone key — only SOL.
  */
