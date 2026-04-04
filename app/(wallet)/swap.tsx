@@ -253,20 +253,28 @@ function SuccessCard({
 }) {
   const isPending = result.status === 'pending';
   const isEth = COINS[toCoin]?.chain === 'ethereum' || result.explorerUrl.includes('etherscan');
+  const isDevMock = result.txHash.startsWith('dev_');
 
   return (
     <View style={success.card}>
       <Text style={success.icon}>✅</Text>
-      <Text style={success.title}>Swap Submitted!</Text>
-      {isPending && isEth && (
+      <Text style={success.title}>{isDevMock ? 'Swap Simulated!' : 'Swap Submitted!'}</Text>
+      {isDevMock && (
+        <Text style={success.pendingNote}>
+          🛠 Dev mode — this is a simulated transaction. No real funds were moved.
+        </Text>
+      )}
+      {isPending && isEth && !isDevMock && (
         <Text style={success.pendingNote}>
           ⏳ ETH transaction is confirming on-chain. Status will update automatically.
         </Text>
       )}
       <Text style={success.hash} numberOfLines={2} selectable>{result.txHash}</Text>
-      <TouchableOpacity onPress={() => Linking.openURL(result.explorerUrl)}>
-        <Text style={success.explorerLink}>View on explorer →</Text>
-      </TouchableOpacity>
+      {!isDevMock && (
+        <TouchableOpacity onPress={() => Linking.openURL(result.explorerUrl)}>
+          <Text style={success.explorerLink}>View on explorer →</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity style={success.btn} onPress={onDismiss}>
         <Text style={success.btnText}>New Swap</Text>
       </TouchableOpacity>
@@ -308,7 +316,7 @@ const success = StyleSheet.create({
 export default function SwapScreen() {
   const {
     balances, prices, addresses, addTxRecord, slippagePct, setSlippage,
-    updateTxStatus,
+    updateTxStatus, setBalances,
   } = useAppStore();
   const [fromCoin, setFromCoin] = useState<CoinSymbol>('SOL');
   const [toCoin, setToCoin] = useState<CoinSymbol>('USDC_SOL');
@@ -371,7 +379,12 @@ export default function SwapScreen() {
       setQuote(q);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to fetch quote';
-      Alert.alert('Quote Failed', `${msg}\n\nCheck your connection and try again.`);
+      const isNetworkErr =
+        msg.includes('Network Error') || msg.includes('timeout');
+      Alert.alert(
+        'Quote Failed',
+        isNetworkErr ? `${msg}\n\nCheck your connection and try again.` : msg,
+      );
     } finally {
       setQuoting(false);
     }
@@ -404,6 +417,14 @@ export default function SwapScreen() {
               );
 
               setResult(res);
+
+              // Dev mock: adjust balances to reflect the simulated swap
+              if (res.txHash.startsWith('dev_')) {
+                const updated = { ...balances };
+                updated[fromCoin] = Math.max(0, updated[fromCoin] - quote.fromAmount);
+                updated[toCoin] = updated[toCoin] + quote.toAmount;
+                setBalances(updated);
+              }
 
               const record = {
                 id: res.txHash,

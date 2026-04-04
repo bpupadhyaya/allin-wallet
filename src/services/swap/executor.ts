@@ -19,9 +19,9 @@ import { ethers } from 'ethers';
 import * as btcSigner from '@scure/btc-signer';
 import axios from 'axios';
 import { getMnemonic } from '../storage';
-import { getEthSigner, getSolKeypair, getBtcKeyPair } from '../../crypto/wallets';
+import { getEthSigner, getSolKeypair, getBtcKeyPair, getBtcNetwork } from '../../crypto/wallets';
 import { fetchBtcFeeRates, estimateBtcVbytes } from '../fees';
-import { RPC } from '../../constants/config';
+import { getRpc, getExplorerTxUrl, IS_DEV, DEV_MNEMONIC } from '../../constants/config';
 import { COINS } from '../../constants/coins';
 import type { SwapQuote } from './router';
 
@@ -46,6 +46,20 @@ export async function executeSwap(
 ): Promise<SwapResult> {
   const mnemonic = await getMnemonic();
   if (!mnemonic) throw new Error('Wallet locked — please log in again.');
+
+  // ── Dev mock — the "abandon" mnemonic has no real funds on any network,
+  //    so simulate a successful swap for testing the UI flow.
+  //    Only triggers for the exact dev mnemonic; real wallets always go live.
+  if (IS_DEV && mnemonic === DEV_MNEMONIC) {
+    const fakeTxHash =
+      'dev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const from = COINS[quote.fromCoin];
+    return {
+      txHash: fakeTxHash,
+      status: 'confirmed',
+      explorerUrl: getExplorerTxUrl(from.chain, fakeTxHash),
+    };
+  }
 
   const from = COINS[quote.fromCoin];
 
@@ -74,7 +88,7 @@ async function executeEthSwap(
   mnemonic: string,
   onStatusUpdate?: (txHash: string, status: 'confirmed' | 'failed') => void,
 ): Promise<SwapResult> {
-  const signer = await getEthSigner(mnemonic, RPC.ETHEREUM);
+  const signer = await getEthSigner(mnemonic, getRpc().ETHEREUM);
   const from = COINS[quote.fromCoin];
 
   // Li.Fi quote contains a ready-to-sign transactionRequest
@@ -128,7 +142,7 @@ async function executeEthSwap(
   return {
     txHash: tx.hash,
     status: 'pending',
-    explorerUrl: `https://etherscan.io/tx/${tx.hash}`,
+    explorerUrl: getExplorerTxUrl('ethereum', tx.hash),
   };
 }
 
@@ -171,7 +185,7 @@ async function executeSolSwap(
   mnemonic: string,
 ): Promise<SwapResult> {
   const keypair = await getSolKeypair(mnemonic);
-  const connection = new Connection(RPC.SOLANA, 'confirmed');
+  const connection = new Connection(getRpc().SOLANA, 'confirmed');
 
   // Li.Fi encodes the Solana transaction as base64 in transactionRequest.data
   const encoded = (quote.rawData as {
@@ -203,7 +217,7 @@ async function executeSolSwap(
   return {
     txHash: sig,
     status: 'confirmed',
-    explorerUrl: `https://solscan.io/tx/${sig}`,
+    explorerUrl: getExplorerTxUrl('solana', sig),
   };
 }
 
@@ -275,7 +289,7 @@ async function executeBtcSwap(
     await getBtcKeyPair(mnemonic);
 
   // p2wpkh(compressed pubkey) gives us the witnessScript for each input
-  const senderScript = btcSigner.p2wpkh(btcPubKey).script;
+  const senderScript = btcSigner.p2wpkh(btcPubKey, getBtcNetwork()).script;
 
   // 4. Build P2WPKH transaction
   // allowUnknownOutputs is required because OP_RETURN outputs are classified
@@ -327,7 +341,7 @@ async function executeBtcSwap(
   // 6. Broadcast via mempool.space
   const txHex = Buffer.from(tx.extract()).toString('hex');
   const { data: txHash } = await axios.post<string>(
-    `${RPC.BITCOIN_API}/tx`,
+    `${getRpc().BITCOIN_API}/tx`,
     txHex,
     { headers: { 'Content-Type': 'text/plain' }, timeout: 15000 },
   );
@@ -335,13 +349,13 @@ async function executeBtcSwap(
   return {
     txHash,
     status: 'pending',
-    explorerUrl: `https://mempool.space/tx/${txHash}`,
+    explorerUrl: getExplorerTxUrl('bitcoin', txHash),
   };
 }
 
 async function fetchBtcUtxos(address: string): Promise<BtcUtxo[]> {
   const { data } = await axios.get<BtcUtxo[]>(
-    `${RPC.BITCOIN_API}/address/${address}/utxo`,
+    `${getRpc().BITCOIN_API}/address/${address}/utxo`,
     { timeout: 10000 },
   );
   // Only use confirmed UTXOs for safety

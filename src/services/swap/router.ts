@@ -10,8 +10,8 @@
  */
 
 import axios from 'axios';
-import { LIFI_API_KEY, THORCHAIN_API } from '../../constants/config';
-import { COINS, type CoinSymbol } from '../../constants/coins';
+import { LIFI_API_KEY, getThorchainApi } from '../../constants/config';
+import { COINS, type CoinSymbol, getLifiChainId, getContractAddress } from '../../constants/coins';
 
 export interface SwapQuote {
   fromCoin: CoinSymbol;
@@ -29,11 +29,13 @@ export interface SwapQuote {
   rawData: unknown;
 }
 
-// ─── Chain ID mapping for Li.Fi ─────────────────────────────────────────────
-const LIFI_CHAIN_ID: Record<string, number> = {
-  ethereum: 1,
-  solana: 1151111081099710,
-};
+// ─── Chain ID mapping for Li.Fi (now derived from coin config) ──────────────
+
+// ─── THORChain supported pairs ──────────────────────────────────────────────
+// THORChain supports native assets and major ERC-20s, but NOT Solana SPL tokens.
+const THORCHAIN_SUPPORTED: Set<CoinSymbol> = new Set([
+  'BTC', 'ETH', 'SOL', 'USDC_ETH', 'USDT_ETH',
+]);
 
 // ─── THORChain asset string helpers ─────────────────────────────────────────
 function toThorAsset(coin: (typeof COINS)[CoinSymbol]): string {
@@ -107,10 +109,10 @@ async function getLifiQuote(
   const from = COINS[fromCoin];
   const to = COINS[toCoin];
 
-  const fromChainId = LIFI_CHAIN_ID[from.chain];
-  const toChainId = LIFI_CHAIN_ID[to.chain];
-  const fromToken = from.isNative ? 'native' : from.contractAddress!;
-  const toToken = to.isNative ? 'native' : to.contractAddress!;
+  const fromChainId = getLifiChainId(from);
+  const toChainId = getLifiChainId(to);
+  const fromToken = from.isNative ? 'native' : getContractAddress(from)!;
+  const toToken = to.isNative ? 'native' : getContractAddress(to)!;
   const amountWei = BigInt(
     Math.floor(fromAmount * 10 ** from.decimals),
   ).toString();
@@ -188,6 +190,17 @@ async function getThorchainQuote(
   const from = COINS[fromCoin];
   const to = COINS[toCoin];
 
+  // THORChain doesn't support Solana SPL tokens (USDC_SOL, USDT_SOL) as
+  // source or destination. Guide the user to do a two-step swap instead.
+  if (!THORCHAIN_SUPPORTED.has(fromCoin) || !THORCHAIN_SUPPORTED.has(toCoin)) {
+    const unsupported = !THORCHAIN_SUPPORTED.has(toCoin) ? toCoin : fromCoin;
+    const nativeIntermediate = COINS[unsupported].chain === 'solana' ? 'SOL' : 'ETH';
+    throw new Error(
+      `THORChain does not support ${unsupported.replace('_', ' ')} directly. ` +
+      `Try swapping BTC → ${nativeIntermediate} first, then ${nativeIntermediate} → ${unsupported.replace('_', ' ')}.`,
+    );
+  }
+
   if (!destinationAddress) {
     throw new Error(
       'A destination address is required for THORChain swaps. ' +
@@ -197,23 +210,42 @@ async function getThorchainQuote(
 
   const amountBase = Math.floor(fromAmount * 10 ** from.decimals);
 
-  const { data } = await axios.get<{
+  let data: {
     expected_amount_out: string;
     outbound_delay_seconds?: string;
     fees?: { outbound?: string };
     slippage_bps?: string;
     inbound_address?: string;
     memo?: string;
-  }>(`${THORCHAIN_API}/thorchain/quote/swap`, {
-    params: {
-      from_asset: toThorAsset(from),
-      to_asset: toThorAsset(to),
-      amount: amountBase,
-      destination: destinationAddress,
-      slippage_bps: Math.round(slippagePct * 100),
-    },
-    timeout: 15000,
-  });
+  };
+
+  try {
+    const resp = await axios.get<typeof data>(
+      `${getThorchainApi()}/thorchain/quote/swap`,
+      {
+        params: {
+          from_asset: toThorAsset(from),
+          to_asset: toThorAsset(to),
+          amount: amountBase,
+          destination: destinationAddress,
+          slippage_bps: Math.round(slippagePct * 100),
+        },
+        timeout: 15000,
+      },
+    );
+    data = resp.data;
+  } catch (err: unknown) {
+    // Extract THORChain's error message from the 400 response if available
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    const thorMsg = axiosErr.response?.data?.message;
+    if (thorMsg) {
+      throw new Error(
+        `THORChain: ${thorMsg}. This pair may not be supported — ` +
+        `try swapping to a native asset (SOL, ETH) first.`,
+      );
+    }
+    throw err;
+  }
 
   if (!data.inbound_address || !data.memo) {
     throw new Error(

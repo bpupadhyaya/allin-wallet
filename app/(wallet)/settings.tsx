@@ -20,7 +20,10 @@ import {
 } from '../../src/services/biometric';
 import { clearTxHistory } from '../../src/services/txHistory';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
-import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS } from '../../src/constants/config';
+import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/constants/config';
+import { saveTestnetEnabled } from '../../src/services/storage';
+import { deriveWalletsFromMnemonic } from '../../src/crypto/wallets';
+import { getMnemonic, saveWalletAddresses } from '../../src/services/storage';
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0, 2.0];
 
@@ -72,9 +75,13 @@ export default function Settings() {
     walletType,
     slippagePct,
     biometricEnabled,
+    useTestnet,
     setSlippage,
     setBiometricEnabled,
+    setUseTestnet,
     setRecentTxs,
+    setAddresses,
+    setBalances,
   } = useAppStore();
 
   const [bioAvailable, setBioAvailable] = useState(false);
@@ -160,6 +167,49 @@ export default function Settings() {
             await clearAllData();
             logout();
             router.replace('/(auth)/onboarding');
+          },
+        },
+      ],
+    );
+  }
+
+  async function handleTestnetToggle(value: boolean) {
+    Alert.alert(
+      value ? 'Switch to Testnet?' : 'Switch to Mainnet?',
+      value
+        ? 'This will switch to testnet networks (Sepolia, Solana Devnet, BTC Testnet4). Your BTC address will change. Balances will be reset.'
+        : 'This will switch back to mainnet. Your BTC address will change back. Balances will be reset.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: value ? 'Use Testnet' : 'Use Mainnet',
+          onPress: async () => {
+            setUseTestnet(value);
+            await saveTestnetEnabled(value);
+
+            // Re-derive addresses (BTC changes for testnet)
+            const mnemonic = await getMnemonic();
+            if (mnemonic) {
+              const wallets = await deriveWalletsFromMnemonic(mnemonic);
+              const addrs = {
+                btc: wallets.btc.address,
+                eth: wallets.eth.address,
+                sol: wallets.sol.address,
+              };
+              setAddresses(addrs);
+              await saveWalletAddresses(addrs);
+            }
+
+            // Reset balances so they get re-fetched from the right network
+            setBalances({
+              BTC: 0, ETH: 0, SOL: 0,
+              USDC_SOL: 0, USDT_SOL: 0, USDC_ETH: 0, USDT_ETH: 0,
+            });
+
+            Alert.alert(
+              'Network Changed',
+              `Now using ${value ? 'testnet' : 'mainnet'}. Balances will refresh on the dashboard.`,
+            );
           },
         },
       ],
@@ -273,7 +323,27 @@ export default function Settings() {
         {/* Network */}
         <View style={styles.section}>
           <SectionLabel label="Network" />
+          {useTestnet && (
+            <View style={styles.testnetBanner}>
+              <Text style={styles.testnetBannerText}>
+                🧪 TESTNET MODE — No real funds. BTC Testnet4 · Sepolia · Solana Devnet
+              </Text>
+            </View>
+          )}
           <View style={styles.card}>
+            <SettingRow
+              icon="🧪"
+              label="Use Testnet"
+              sub={useTestnet ? 'Testnet active — switch back for real transactions' : 'Switch to test networks for development'}
+              rightElement={
+                <Switch
+                  value={useTestnet}
+                  onValueChange={handleTestnetToggle}
+                  trackColor={{ false: COLORS.border, true: COLORS.warning }}
+                  thumbColor={COLORS.text}
+                />
+              }
+            />
             <SettingRow
               icon="⚙️"
               label="Custom RPC Endpoints"
@@ -383,6 +453,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
     lineHeight: 18,
+  },
+  testnetBanner: {
+    backgroundColor: '#1A1400',
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+    padding: SPACING.md,
+  },
+  testnetBannerText: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   devBanner: {
     backgroundColor: COLORS.devBg,

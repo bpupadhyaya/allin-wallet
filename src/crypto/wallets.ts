@@ -3,6 +3,7 @@ import * as btcSigner from '@scure/btc-signer';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { ethers } from 'ethers';
 import { mnemonicToSeed } from './mnemonic';
+import { isTestnet } from '../constants/config';
 
 export interface DerivedWallets {
   btc: { address: string; publicKey: string };
@@ -11,13 +12,20 @@ export interface DerivedWallets {
 }
 
 // BIP-44 derivation paths
+function getBtcPath(): string {
+  // Coin type 1 = testnet, 0 = mainnet (BIP-44)
+  return isTestnet() ? "m/84'/1'/0'/0/0" : "m/84'/0'/0'/0/0";
+}
 const PATHS = {
-  /** Native SegWit (bech32 P2WPKH) — lowest fees, modern standard */
-  BTC: "m/84'/0'/0'/0/0",
   ETH: "m/44'/60'/0'/0/0",
   /** Solana uses ed25519; @scure/bip32 supports it via slip10 */
   SOL: "m/44'/501'/0'/0'",
 };
+
+/** Get the BTC network constant for @scure/btc-signer */
+export function getBtcNetwork() {
+  return isTestnet() ? btcSigner.TEST_NETWORK : btcSigner.NETWORK;
+}
 
 export async function deriveWalletsFromMnemonic(
   mnemonic: string,
@@ -25,17 +33,17 @@ export async function deriveWalletsFromMnemonic(
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
 
-  // ── Bitcoin (Native SegWit P2WPKH) ─────────────────────────────────────
-  const btcKey = root.derive(PATHS.BTC);
+  // ── Bitcoin (Native SegWit P2WPKH) ────────────��────────────────────────
+  const btcKey = root.derive(getBtcPath());
   const btcPubKey = btcKey.publicKey!;
-  const btcAddress = btcSigner.p2wpkh(btcPubKey, btcSigner.NETWORK).address!;
+  const btcAddress = btcSigner.p2wpkh(btcPubKey, getBtcNetwork()).address!;
 
-  // ── Ethereum ────────────────────────────────────────────────────────────
+  // ── Ethereum ─────────────���──────────────────────────────��───────────────
   const ethKey = root.derive(PATHS.ETH);
   const ethPriv = '0x' + Buffer.from(ethKey.privateKey!).toString('hex');
   const ethWallet = new ethers.Wallet(ethPriv);
 
-  // ── Solana (ed25519 via slip10 derivation) ──────────────────────────────
+  // ── Solana (ed25519 via slip10 derivation) ─────────────���────────────────
   const solKey = root.derive(PATHS.SOL);
   const solKeypair = Keypair.fromSeed(solKey.privateKey!.slice(0, 32));
 
@@ -80,7 +88,7 @@ export async function getSolKeypair(mnemonic: string): Promise<Keypair> {
 export async function getBtcPrivateKey(mnemonic: string): Promise<Uint8Array> {
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
-  const btcKey = root.derive(PATHS.BTC);
+  const btcKey = root.derive(getBtcPath());
   return btcKey.privateKey!;
 }
 
@@ -94,7 +102,7 @@ export async function getBtcKeyPair(
 ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
-  const btcKey = root.derive(PATHS.BTC);
+  const btcKey = root.derive(getBtcPath());
   return {
     privateKey: btcKey.privateKey!,
     publicKey: btcKey.publicKey!, // compressed 33-byte secp256k1 key

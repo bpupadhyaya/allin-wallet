@@ -36,7 +36,7 @@ import {
   FONT_SIZE,
   BORDER_RADIUS,
 } from '../../src/constants/theme';
-import { DEV_USERNAME, DEV_ADDRESSES } from '../../src/constants/config';
+import { DEV_USERNAME, getDevAddresses } from '../../src/constants/config';
 
 type Mode = 'password' | 'pin';
 
@@ -132,9 +132,10 @@ export default function LoginScreen() {
       // Persist wallet type + addresses so bootstrap recognises the wallet
       // on app restart or after sign-out.
       await saveWalletType('seed');
-      await saveWalletAddresses(DEV_ADDRESSES);
+      const devAddrs = getDevAddresses();
+      await saveWalletAddresses(devAddrs);
       const history = await loadTxHistory();
-      setAddresses(DEV_ADDRESSES);
+      setAddresses(devAddrs);
       setHasWallet(true, 'seed');
       setRecentTxs(history);
       setAuthenticated(true, DEV_USERNAME);

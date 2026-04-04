@@ -1,3 +1,5 @@
+import { isTestnet } from './config';
+
 export type CoinSymbol =
   | 'BTC'
   | 'ETH'
@@ -16,11 +18,27 @@ export interface CoinConfig {
   decimals: number;
   isNative: boolean;
   contractAddress?: string;
+  /** Testnet contract address (if different from mainnet) */
+  testnetContractAddress?: string;
   /** Li.Fi chain ID (undefined for Bitcoin which uses Thorchain) */
   lifiChainId?: number;
+  /** Li.Fi testnet chain ID (e.g. Sepolia) */
+  testnetLifiChainId?: number;
   color: string;
   /** Emoji/symbol icon for display */
   icon: string;
+}
+
+/** Get the active contract address (mainnet or testnet) */
+export function getContractAddress(coin: CoinConfig): string | undefined {
+  if (isTestnet() && coin.testnetContractAddress) return coin.testnetContractAddress;
+  return coin.contractAddress;
+}
+
+/** Get the active Li.Fi chain ID */
+export function getLifiChainId(coin: CoinConfig): number | undefined {
+  if (isTestnet() && coin.testnetLifiChainId) return coin.testnetLifiChainId;
+  return coin.lifiChainId;
 }
 
 export const COINS: Record<CoinSymbol, CoinConfig> = {
@@ -40,6 +58,7 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     decimals: 18,
     isNative: true,
     lifiChainId: 1,
+    testnetLifiChainId: 11155111, // Sepolia
     color: '#627EEA',
     icon: 'Ξ',
   },
@@ -60,6 +79,7 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     decimals: 6,
     isNative: false,
     contractAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    testnetContractAddress: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
     lifiChainId: 1151111081099710,
     color: '#2775CA',
     icon: '$',
@@ -71,6 +91,7 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     decimals: 6,
     isNative: false,
     contractAddress: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+    testnetContractAddress: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // no official devnet USDT
     lifiChainId: 1151111081099710,
     color: '#26A17B',
     icon: '₮',
@@ -82,7 +103,9 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     decimals: 6,
     isNative: false,
     contractAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    testnetContractAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Circle Sepolia USDC
     lifiChainId: 1,
+    testnetLifiChainId: 11155111, // Sepolia
     color: '#2775CA',
     icon: '$',
   },
@@ -93,7 +116,9 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     decimals: 6,
     isNative: false,
     contractAddress: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    testnetContractAddress: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // no official Sepolia USDT
     lifiChainId: 1,
+    testnetLifiChainId: 11155111,
     color: '#26A17B',
     icon: '₮',
   },

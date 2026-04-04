@@ -7,7 +7,7 @@
  */
 import axios from 'axios';
 import { ethers } from 'ethers';
-import { RPC } from '../constants/config';
+import { getRpc } from '../constants/config';
 
 // ─── Bitcoin ─────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ export async function fetchBtcFeeRates(): Promise<BtcFeeRates> {
     halfHourFee: number;
     hourFee: number;
     economyFee: number;
-  }>(`${RPC.BITCOIN_API}/v1/fees/recommended`, { timeout: 8000 });
+  }>(`${getRpc().BITCOIN_API}/v1/fees/recommended`, { timeout: 8000 });
 
   return {
     slow: data.hourFee,
@@ -63,7 +63,7 @@ export interface EthGasPrices {
 }
 
 export async function fetchEthGasPrices(): Promise<EthGasPrices> {
-  const provider = new ethers.JsonRpcProvider(RPC.ETHEREUM);
+  const provider = new ethers.JsonRpcProvider(getRpc().ETHEREUM);
   const feeData = await provider.getFeeData();
   const base = feeData.maxFeePerGas ?? feeData.gasPrice ?? ethers.parseUnits('20', 'gwei');
 

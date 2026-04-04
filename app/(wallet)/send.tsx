@@ -50,7 +50,7 @@ import {
 import { saveTxRecord, updateTxRecord } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
-import { RPC } from '../../src/constants/config';
+import { getRpc, getExplorerTxUrl } from '../../src/constants/config';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
 
 const ALL_SENDABLE: CoinSymbol[] = [
@@ -310,7 +310,7 @@ export default function SendScreen() {
         hash = result.txHash;
         explorer = result.explorerUrl;
       } else if (chain === 'ethereum') {
-        const signer = await getEthSigner(mnemonic, RPC.ETHEREUM);
+        const signer = await getEthSigner(mnemonic, getRpc().ETHEREUM);
         if (coin === 'ETH') {
           const tx = await signer.sendTransaction({
             to: toAddress.trim(),
@@ -329,7 +329,7 @@ export default function SendScreen() {
           );
           hash = tx.hash;
         }
-        explorer = `https://etherscan.io/tx/${hash}`;
+        explorer = getExplorerTxUrl('ethereum', hash);
 
         // Background confirmation polling — ETH blocks take ~12 s each
         const ethHash = hash;
@@ -346,7 +346,7 @@ export default function SendScreen() {
       } else {
         // Solana
         const keypair = await getSolKeypair(mnemonic);
-        const connection = new Connection(RPC.SOLANA, 'confirmed');
+        const connection = new Connection(getRpc().SOLANA, 'confirmed');
         const toPubkey = new PublicKey(toAddress.trim());
 
         if (coin === 'SOL') {
@@ -374,7 +374,7 @@ export default function SendScreen() {
           );
           hash = await connection.sendTransaction(tx, [keypair]);
         }
-        explorer = `https://solscan.io/tx/${hash}`;
+        explorer = getExplorerTxUrl('solana', hash);
       }
 
       // Persist tx record

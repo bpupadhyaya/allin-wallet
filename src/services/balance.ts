@@ -1,7 +1,8 @@
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { ethers } from 'ethers';
 import axios from 'axios';
-import { RPC, IS_DEV, DEV_ADDRESSES } from '../constants/config';
+import { getRpc, IS_DEV, getDevAddresses } from '../constants/config';
+import { COINS, getContractAddress } from '../constants/coins';
 
 // ─── Dev mock balances ────────────────────────────────────────────────────────
 // Returned instantly when the dev account is active (IS_DEV + abandon mnemonic).
@@ -40,10 +41,14 @@ const ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
 ];
 
-const USDC_ETH = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-const USDT_ETH = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
-const USDC_SOL_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-const USDT_SOL_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
+function getTokenAddresses() {
+  return {
+    USDC_ETH: getContractAddress(COINS.USDC_ETH)!,
+    USDT_ETH: getContractAddress(COINS.USDT_ETH)!,
+    USDC_SOL_MINT: getContractAddress(COINS.USDC_SOL)!,
+    USDT_SOL_MINT: getContractAddress(COINS.USDT_SOL)!,
+  };
+}
 const SPL_TOKEN_PROGRAM_ID = new PublicKey(
   'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
 );
@@ -55,11 +60,12 @@ export async function fetchAllBalances(addresses: {
 }): Promise<Balances> {
   // In dev builds, return instant mock balances for the dev test wallet so
   // swap / send flows can be exercised without real on-chain funds.
+  const devAddrs = getDevAddresses();
   if (
     IS_DEV &&
-    addresses.btc === DEV_ADDRESSES.btc &&
-    addresses.eth === DEV_ADDRESSES.eth &&
-    addresses.sol === DEV_ADDRESSES.sol
+    addresses.btc === devAddrs.btc &&
+    addresses.eth === devAddrs.eth &&
+    addresses.sol === devAddrs.sol
   ) {
     return { ...DEV_BALANCES };
   }
@@ -85,7 +91,7 @@ export async function fetchAllBalances(addresses: {
 }
 
 async function fetchBtcBalance(address: string): Promise<number> {
-  const res = await axios.get(`${RPC.BITCOIN_API}/address/${address}`, {
+  const res = await axios.get(`${getRpc().BITCOIN_API}/address/${address}`, {
     timeout: 10000,
   });
   const { funded_txo_sum, spent_txo_sum } = res.data.chain_stats as {
@@ -100,11 +106,12 @@ async function fetchEthBalances(address: string): Promise<{
   USDC_ETH: number;
   USDT_ETH: number;
 }> {
-  const provider = new ethers.JsonRpcProvider(RPC.ETHEREUM);
+  const tokens = getTokenAddresses();
+  const provider = new ethers.JsonRpcProvider(getRpc().ETHEREUM);
   const [ethBal, usdcBal, usdtBal] = await Promise.all([
     provider.getBalance(address),
-    getERC20Balance(provider, USDC_ETH, address, 6),
-    getERC20Balance(provider, USDT_ETH, address, 6),
+    getERC20Balance(provider, tokens.USDC_ETH, address, 6),
+    getERC20Balance(provider, tokens.USDT_ETH, address, 6),
   ]);
   return {
     ETH: parseFloat(ethers.formatEther(ethBal)),
@@ -129,7 +136,7 @@ async function fetchSolBalances(address: string): Promise<{
   USDC_SOL: number;
   USDT_SOL: number;
 }> {
-  const connection = new Connection(RPC.SOLANA, 'confirmed');
+  const connection = new Connection(getRpc().SOLANA, 'confirmed');
   const pubkey = new PublicKey(address);
 
   const [lamports, tokenAccounts] = await Promise.all([
@@ -147,8 +154,9 @@ async function fetchSolBalances(address: string): Promise<{
       mint: string;
       tokenAmount: { uiAmount: number | null };
     };
-    if (info.mint === USDC_SOL_MINT) USDC_SOL = info.tokenAmount.uiAmount ?? 0;
-    if (info.mint === USDT_SOL_MINT) USDT_SOL = info.tokenAmount.uiAmount ?? 0;
+    const tokens = getTokenAddresses();
+    if (info.mint === tokens.USDC_SOL_MINT) USDC_SOL = info.tokenAmount.uiAmount ?? 0;
+    if (info.mint === tokens.USDT_SOL_MINT) USDT_SOL = info.tokenAmount.uiAmount ?? 0;
   }
 
   return { SOL: lamports / LAMPORTS_PER_SOL, USDC_SOL, USDT_SOL };

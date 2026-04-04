@@ -26,6 +26,8 @@ import { PinPad } from '../../src/components/PinPad';
 import { Input } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { DevShortcut } from '../../src/components/DevShortcut';
+import { DEV_PIN } from '../../src/constants/config';
 
 type Mode = 'pin' | 'password';
 
@@ -159,12 +161,19 @@ export default function UnlockScreen() {
         </View>
 
         {mode === 'pin' ? (
-          <PinPad
-            title="Enter PIN"
-            subtitle="Use your 6-digit PIN to unlock"
-            onComplete={handlePinComplete}
-            error={pinError}
-          />
+          <>
+            <PinPad
+              title="Enter PIN"
+              subtitle="Use your 6-digit PIN to unlock"
+              onComplete={handlePinComplete}
+              error={pinError}
+            />
+            <DevShortcut
+              label="Auto-fill dev PIN and unlock"
+              actionLabel="Dev Unlock (1 tap)"
+              onAction={() => handlePinComplete(DEV_PIN)}
+            />
+          </>
         ) : (
           <View style={styles.form}>
             <Input

@@ -5,11 +5,20 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppStore } from '../src/store/appStore';
-import { SESSION_TIMEOUT_MS } from '../src/constants/config';
+import { SESSION_TIMEOUT_MS, setTestnetMode } from '../src/constants/config';
+import { getTestnetEnabled } from '../src/services/storage';
 
 export default function RootLayout() {
-  const { isAuthenticated, lock } = useAppStore();
+  const { isAuthenticated, lock, setUseTestnet } = useAppStore();
   const bgTimestamp = useRef<number | null>(null);
+
+  // ── Load testnet preference on startup ──────────────────────────────────
+  useEffect(() => {
+    getTestnetEnabled().then((enabled) => {
+      setTestnetMode(enabled);
+      setUseTestnet(enabled);
+    });
+  }, []);
 
   // ── Session timeout on app background ─────────────────────────────────────
   useEffect(() => {

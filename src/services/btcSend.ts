@@ -7,9 +7,9 @@
 import * as btcSigner from '@scure/btc-signer';
 import axios from 'axios';
 import { getMnemonic } from './storage';
-import { getBtcKeyPair } from '../crypto/wallets';
+import { getBtcKeyPair, getBtcNetwork } from '../crypto/wallets';
 import { fetchBtcFeeRates, estimateBtcVbytes } from './fees';
-import { RPC } from '../constants/config';
+import { getRpc, getExplorerTxUrl, IS_DEV, DEV_MNEMONIC } from '../constants/config';
 
 export interface BtcUtxo {
   txid: string;
@@ -20,7 +20,7 @@ export interface BtcUtxo {
 
 export async function fetchBtcUtxos(address: string): Promise<BtcUtxo[]> {
   const { data } = await axios.get<BtcUtxo[]>(
-    `${RPC.BITCOIN_API}/address/${address}/utxo`,
+    `${getRpc().BITCOIN_API}/address/${address}/utxo`,
     { timeout: 10000 },
   );
   return data.filter((u) => u.status.confirmed);
@@ -42,8 +42,20 @@ export interface BtcSendResult {
 
 export async function sendBtc(params: BtcSendParams): Promise<BtcSendResult> {
   const { toAddress, amountBtc, feeRateSatVbyte, senderAddress } = params;
+
   const mnemonic = await getMnemonic();
   if (!mnemonic) throw new Error('Wallet locked — please log in again.');
+
+  // Dev mock — abandon mnemonic has no real UTXOs anywhere
+  if (IS_DEV && mnemonic === DEV_MNEMONIC) {
+    const fakeTxHash =
+      'dev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    return {
+      txHash: fakeTxHash,
+      feeBtc: 0.00001,
+      explorerUrl: getExplorerTxUrl('bitcoin', fakeTxHash),
+    };
+  }
 
   const utxos = await fetchBtcUtxos(senderAddress);
   if (utxos.length === 0) throw new Error('No confirmed UTXOs available.');
@@ -79,7 +91,7 @@ export async function sendBtc(params: BtcSendParams): Promise<BtcSendResult> {
 
   const { privateKey: btcPrivKey, publicKey: btcPubKey } = await getBtcKeyPair(mnemonic);
   // p2wpkh requires a compressed 33-byte public key — btcPubKey from HDKey is already correct
-  const senderScript = btcSigner.p2wpkh(btcPubKey).script;
+  const senderScript = btcSigner.p2wpkh(btcPubKey, getBtcNetwork()).script;
 
   const tx = new btcSigner.Transaction();
 
@@ -111,7 +123,7 @@ export async function sendBtc(params: BtcSendParams): Promise<BtcSendResult> {
 
   const txHex = Buffer.from(tx.extract()).toString('hex');
   const { data: txHash } = await axios.post<string>(
-    `${RPC.BITCOIN_API}/tx`,
+    `${getRpc().BITCOIN_API}/tx`,
     txHex,
     { headers: { 'Content-Type': 'text/plain' }, timeout: 15000 },
   );
@@ -119,6 +131,6 @@ export async function sendBtc(params: BtcSendParams): Promise<BtcSendResult> {
   return {
     txHash,
     feeBtc: feeSats / 1e8,
-    explorerUrl: `https://mempool.space/tx/${txHash}`,
+    explorerUrl: getExplorerTxUrl('bitcoin', txHash),
   };
 }

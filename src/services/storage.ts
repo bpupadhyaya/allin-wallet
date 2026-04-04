@@ -15,6 +15,7 @@ const K = {
   WALLET_TYPE: 'wallet_type_v1',
   ADDRESSES: 'wallet_addresses_v1',
   SAGA_PUBKEY: 'wallet_saga_pubkey_v1',
+  TESTNET_ENABLED: 'wallet_testnet_v1',
 } as const;
 
 const SECURE_OPTS: SecureStore.SecureStoreOptions = {
@@ -108,6 +109,17 @@ export async function saveSagaPubkey(pubkey: string): Promise<void> {
 
 export async function getSagaPubkey(): Promise<string | null> {
   return SecureStore.getItemAsync(K.SAGA_PUBKEY);
+}
+
+// ─── Testnet preference (non-sensitive, AsyncStorage) ─────────────────────
+
+export async function saveTestnetEnabled(v: boolean): Promise<void> {
+  await AsyncStorage.setItem(K.TESTNET_ENABLED, v ? 'true' : 'false');
+}
+
+export async function getTestnetEnabled(): Promise<boolean> {
+  const v = await AsyncStorage.getItem(K.TESTNET_ENABLED);
+  return v === 'true';
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

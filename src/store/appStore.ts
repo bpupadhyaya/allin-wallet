@@ -5,6 +5,7 @@ import type { Prices, PriceChanges } from '../services/prices';
 import { ZERO_PRICES, ZERO_CHANGES } from '../services/prices';
 import type { WalletType, WalletAddresses } from '../services/storage';
 import type { CoinSymbol } from '../constants/coins';
+import { setTestnetMode } from '../constants/config';
 
 export interface TxRecord {
   id: string;
@@ -72,6 +73,7 @@ interface AppState {
   // ── User preferences ──────────────────────────────────────────────────────
   slippagePct: number;
   biometricEnabled: boolean;
+  useTestnet: boolean;
 
   // ── Actions ───────────────────────────────────────────────────────────────
   setAuthenticated: (val: boolean, username?: string) => void;
@@ -94,6 +96,7 @@ interface AppState {
   setWcInitialized: (v: boolean) => void;
   setSlippage: (pct: number) => void;
   setBiometricEnabled: (v: boolean) => void;
+  setUseTestnet: (v: boolean) => void;
   lock: () => void;
   unlock: () => void;
   logout: () => void;
@@ -119,6 +122,7 @@ export const useAppStore = create<AppState>()((set) => ({
   wcInitialized: false,
   slippagePct: 0.5,
   biometricEnabled: false,
+  useTestnet: false,
 
   setAuthenticated: (val, username) =>
     set({ isAuthenticated: val, username: username ?? null }),
@@ -150,6 +154,10 @@ export const useAppStore = create<AppState>()((set) => ({
   setWcInitialized: (v) => set({ wcInitialized: v }),
   setSlippage: (pct) => set({ slippagePct: pct }),
   setBiometricEnabled: (v) => set({ biometricEnabled: v }),
+  setUseTestnet: (v) => {
+    setTestnetMode(v);
+    set({ useTestnet: v });
+  },
   lock: () => set({ isLocked: true }),
   unlock: () => set({ isLocked: false }),
   logout: () =>
