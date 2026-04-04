@@ -25,8 +25,9 @@ import { CameraView, Camera } from 'expo-camera';
 import { useAppStore } from '../../src/store/appStore';
 import { wcService } from '../../src/services/walletConnect';
 import { Button } from '../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import type { WcSession, WcRequest } from '../../src/store/appStore';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 // ─── QR Scanner modal ───────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ function QrModal({
   onScan: (uri: string) => void;
   onClose: () => void;
 }) {
+  const { fontSize, contentSize } = useScaledTheme();
   const [hasPerm, setHasPerm] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
 
@@ -52,13 +54,13 @@ function QrModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={qrStyles.container}>
-        <Text style={qrStyles.title}>Scan WalletConnect QR</Text>
-        <Text style={qrStyles.subtitle}>
+        <Text style={[qrStyles.title, { fontSize: fontSize.xl }]}>Scan WalletConnect QR</Text>
+        <Text style={[qrStyles.subtitle, { fontSize: contentSize.sm }]}>
           Open a dApp in your browser and scan its WalletConnect QR code.
         </Text>
 
         {hasPerm === false && (
-          <Text style={qrStyles.permText}>
+          <Text style={[qrStyles.permText, { fontSize: contentSize.sm }]}>
             Camera permission denied. Please allow camera access in your device
             settings to use QR scanning.
           </Text>
@@ -100,7 +102,7 @@ const qrStyles = StyleSheet.create({
     gap: SPACING.md,
     justifyContent: 'center',
   },
-  title: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: '700', textAlign: 'center' },
+  title: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy, textAlign: 'center' },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, textAlign: 'center', lineHeight: 20 },
   camBox: {
     height: 300,
@@ -125,6 +127,7 @@ function RequestModal({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
   const isSign = req.method !== 'eth_sendTransaction';
 
   return (
@@ -134,13 +137,13 @@ function RequestModal({
           {req.peerIcon ? (
             <Image source={{ uri: req.peerIcon }} style={reqStyles.peerIcon} />
           ) : (
-            <Text style={reqStyles.peerIconPlaceholder}>🌐</Text>
+            <Text style={[reqStyles.peerIconPlaceholder, { fontSize: scaleFont(40) }]}>🌐</Text>
           )}
-          <Text style={reqStyles.peerName}>{req.peerName}</Text>
-          <Text style={reqStyles.method}>{req.method}</Text>
+          <Text style={[reqStyles.peerName, { fontSize: fontSize.lg }]}>{req.peerName}</Text>
+          <Text style={[reqStyles.method, { fontSize: fontSize.sm }]}>{req.method}</Text>
 
           <View style={reqStyles.warningBox}>
-            <Text style={reqStyles.warningText}>
+            <Text style={[reqStyles.warningText, { fontSize: contentSize.xs }]}>
               {isSign
                 ? '⚠ You are about to sign a message. Only approve if you trust this dApp and initiated this request.'
                 : '⚠ You are about to send a transaction. Verify the details carefully. This action cannot be undone.'}
@@ -188,8 +191,8 @@ const reqStyles = StyleSheet.create({
   },
   peerIcon: { width: 56, height: 56, borderRadius: 28, alignSelf: 'center' },
   peerIconPlaceholder: { fontSize: 40, textAlign: 'center' },
-  peerName: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: '700', textAlign: 'center' },
-  method: { color: COLORS.primary, fontSize: FONT_SIZE.sm, fontWeight: '600', textAlign: 'center' },
+  peerName: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy, textAlign: 'center' },
+  method: { color: COLORS.primary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold, textAlign: 'center' },
   warningBox: {
     backgroundColor: '#2A1A0A',
     borderRadius: BORDER_RADIUS.sm,
@@ -212,6 +215,7 @@ const reqStyles = StyleSheet.create({
 // ─── Session row ─────────────────────────────────────────────────────────────
 
 function SessionRow({ session, onDisconnect }: { session: WcSession; onDisconnect: () => void }) {
+  const { fontSize, scaleFont } = useScaledTheme();
   const date = new Date(session.connectedAt).toLocaleDateString();
   return (
     <View style={sessionStyles.row}>
@@ -219,16 +223,16 @@ function SessionRow({ session, onDisconnect }: { session: WcSession; onDisconnec
         <Image source={{ uri: session.peerIcon }} style={sessionStyles.icon} />
       ) : (
         <View style={sessionStyles.iconPlaceholder}>
-          <Text style={{ fontSize: 18 }}>🌐</Text>
+          <Text style={{ fontSize: scaleFont(18) }}>🌐</Text>
         </View>
       )}
       <View style={sessionStyles.info}>
-        <Text style={sessionStyles.name}>{session.peerName}</Text>
-        <Text style={sessionStyles.url} numberOfLines={1}>{session.peerUrl}</Text>
-        <Text style={sessionStyles.date}>Connected {date}</Text>
+        <Text style={[sessionStyles.name, { fontSize: fontSize.sm }]}>{session.peerName}</Text>
+        <Text style={[sessionStyles.url, { fontSize: fontSize.xs }]} numberOfLines={1}>{session.peerUrl}</Text>
+        <Text style={[sessionStyles.date, { fontSize: fontSize.xs }]}>Connected {date}</Text>
       </View>
       <TouchableOpacity onPress={onDisconnect} style={sessionStyles.disconnectBtn}>
-        <Text style={sessionStyles.disconnectText}>Disconnect</Text>
+        <Text style={[sessionStyles.disconnectText, { fontSize: fontSize.xs }]}>Disconnect</Text>
       </TouchableOpacity>
     </View>
   );
@@ -256,7 +260,7 @@ const sessionStyles = StyleSheet.create({
     flexShrink: 0,
   },
   info: { flex: 1, gap: 2 },
-  name: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  name: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.heavy },
   url: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   date: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   disconnectBtn: {
@@ -266,7 +270,7 @@ const sessionStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF4D4D',
   },
-  disconnectText: { color: '#FF4D4D', fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  disconnectText: { color: '#FF4D4D', fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
 });
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
@@ -282,6 +286,7 @@ export default function WalletConnectScreen() {
     setWcInitialized,
     addresses,
   } = useAppStore();
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
 
   const [showQr, setShowQr] = useState(false);
   const [pairing, setPairing] = useState(false);
@@ -349,7 +354,7 @@ export default function WalletConnectScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>WalletConnect</Text>
+        <Text style={[styles.title, { fontSize: fontSize.xl }]}>WalletConnect</Text>
         <Button
           title={pairing ? 'Pairing…' : 'Scan QR'}
           onPress={() => setShowQr(true)}
@@ -358,7 +363,7 @@ export default function WalletConnectScreen() {
         />
       </View>
 
-      <Text style={styles.caption}>
+      <Text style={[styles.caption, { fontSize: contentSize.xs }]}>
         Connect to any WalletConnect-compatible dApp. Your private keys never
         leave your device — all signing happens on-chain locally.
       </Text>
@@ -366,9 +371,9 @@ export default function WalletConnectScreen() {
       {/* Sessions list */}
       {wcSessions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>🔗</Text>
-          <Text style={styles.emptyText}>No active sessions</Text>
-          <Text style={styles.emptyHint}>
+          <Text style={[styles.emptyIcon, { fontSize: scaleFont(48) }]}>🔗</Text>
+          <Text style={[styles.emptyText, { fontSize: fontSize.lg }]}>No active sessions</Text>
+          <Text style={[styles.emptyHint, { fontSize: contentSize.sm }]}>
             Tap "Scan QR" to pair with a dApp.
           </Text>
         </View>
@@ -417,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  title: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  title: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy },
   scanBtn: { alignSelf: 'flex-end' },
   caption: {
     color: COLORS.textSecondary,
@@ -432,6 +437,6 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   emptyIcon: { fontSize: 48 },
-  emptyText: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  emptyText: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy },
   emptyHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.sm },
 });

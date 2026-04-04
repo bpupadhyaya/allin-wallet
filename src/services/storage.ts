@@ -5,6 +5,7 @@ import {
   BCRYPT_ROUNDS_PASSWORD,
   BCRYPT_ROUNDS_PIN,
 } from '../constants/config';
+import type { DisplayScales } from '../constants/theme';
 
 // ─── Key names ──────────────────────────────────────────────────────────────
 const K = {
@@ -16,6 +17,7 @@ const K = {
   ADDRESSES: 'wallet_addresses_v1',
   SAGA_PUBKEY: 'wallet_saga_pubkey_v1',
   TESTNET_ENABLED: 'wallet_testnet_v1',
+  DISPLAY_SCALES: 'display_scales_v1',
 } as const;
 
 const SECURE_OPTS: SecureStore.SecureStoreOptions = {
@@ -120,6 +122,17 @@ export async function saveTestnetEnabled(v: boolean): Promise<void> {
 export async function getTestnetEnabled(): Promise<boolean> {
   const v = await AsyncStorage.getItem(K.TESTNET_ENABLED);
   return v === 'true';
+}
+
+// ─── Display scales (non-sensitive, AsyncStorage) ─────────────────────────
+
+export async function saveDisplayScales(scales: DisplayScales): Promise<void> {
+  await AsyncStorage.setItem(K.DISPLAY_SCALES, JSON.stringify(scales));
+}
+
+export async function getDisplayScales(): Promise<DisplayScales | null> {
+  const v = await AsyncStorage.getItem(K.DISPLAY_SCALES);
+  return v ? (JSON.parse(v) as DisplayScales) : null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

@@ -14,14 +14,16 @@ import { useAppStore } from '../../src/store/appStore';
 import { fetchAllBalances } from '../../src/services/balance';
 import { fetchPrices, formatUsd, formatChange, toUsd, isDepeggedStable } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { GasFeeBar } from '../../src/components/GasFeeBar';
 import { AllocationChart } from '../../src/components/AllocationChart';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 // ─── Portfolio total banner ───────────────────────────────────────────────────
 
 function PortfolioBanner() {
   const { balances, prices } = useAppStore();
+  const { fontSize, contentSize, navSize } = useScaledTheme();
 
   const total = COIN_LIST.reduce((sum, coin) => {
     return sum + toUsd(balances[coin.symbol], prices[coin.symbol]);
@@ -29,9 +31,9 @@ function PortfolioBanner() {
 
   return (
     <View style={bannerStyles.card}>
-      <Text style={bannerStyles.label}>Total Portfolio Value</Text>
-      <Text style={bannerStyles.total}>{formatUsd(total)}</Text>
-      <Text style={bannerStyles.sub}>Across BTC · ETH · SOL networks</Text>
+      <Text style={[bannerStyles.label, { fontSize: navSize.xs }]}>Total Portfolio Value</Text>
+      <Text style={[bannerStyles.total, { fontSize: fontSize.xxxl }]}>{formatUsd(total)}</Text>
+      <Text style={[bannerStyles.sub, { fontSize: contentSize.xs }]}>Across BTC · ETH · SOL networks</Text>
     </View>
   );
 }
@@ -46,8 +48,8 @@ const bannerStyles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xs,
   },
-  label: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  total: { color: COLORS.text, fontSize: FONT_SIZE.xxxl, fontWeight: '800' },
+  label: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.heavy, letterSpacing: 1, textTransform: 'uppercase' },
+  total: { color: COLORS.text, fontSize: FONT_SIZE.xxxl, fontWeight: FONT_WEIGHT.heavy },
   sub: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs },
 });
 
@@ -55,6 +57,7 @@ const bannerStyles = StyleSheet.create({
 
 function CoinRow({ symbol }: { symbol: CoinSymbol }) {
   const { balances, prices, priceChanges } = useAppStore();
+  const { fontSize, scaleFont, uiScale } = useScaledTheme();
   const coin = COINS[symbol];
   const balance = balances[symbol];
   const price = prices[symbol];
@@ -79,23 +82,23 @@ function CoinRow({ symbol }: { symbol: CoinSymbol }) {
 
   return (
     <View style={rowStyles.row}>
-      <View style={[rowStyles.icon, { backgroundColor: coin.color + '22' }]}>
-        <Text style={[rowStyles.iconText, { color: coin.color }]}>{coin.icon}</Text>
+      <View style={[rowStyles.icon, { backgroundColor: coin.color + '22', width: 40 * uiScale, height: 40 * uiScale, borderRadius: 20 * uiScale }]}>
+        <Text style={[rowStyles.iconText, { color: coin.color, fontSize: scaleFont(20) }]}>{coin.icon}</Text>
       </View>
 
       <View style={rowStyles.info}>
         <View style={rowStyles.nameRow}>
-          <Text style={rowStyles.name}>{coin.name}</Text>
+          <Text style={[rowStyles.name, { fontSize: fontSize.md }]}>{coin.name}</Text>
           {depegged && (
             <View style={rowStyles.depegBadge}>
-              <Text style={rowStyles.depegText}>DE-PEG ⚠️</Text>
+              <Text style={[rowStyles.depegText, { fontSize: scaleFont(9) }]}>DE-PEG ⚠️</Text>
             </View>
           )}
         </View>
         <View style={rowStyles.priceRow}>
-          <Text style={rowStyles.price}>{priceDisplay}</Text>
+          <Text style={[rowStyles.price, { fontSize: fontSize.xs }]}>{priceDisplay}</Text>
           {price > 0 && (
-            <Text style={[rowStyles.change, { color: changeColor }]}>
+            <Text style={[rowStyles.change, { color: changeColor, fontSize: fontSize.xs }]}>
               {formatChange(change)}
             </Text>
           )}
@@ -103,8 +106,8 @@ function CoinRow({ symbol }: { symbol: CoinSymbol }) {
       </View>
 
       <View style={rowStyles.balanceCol}>
-        <Text style={rowStyles.balance}>{balanceDisplay} {coin.symbol.replace('_', ' ')}</Text>
-        <Text style={rowStyles.usd}>{usdValue > 0 ? formatUsd(usdValue) : '—'}</Text>
+        <Text style={[rowStyles.balance, { fontSize: fontSize.sm }]}>{balanceDisplay} {coin.symbol.replace('_', ' ')}</Text>
+        <Text style={[rowStyles.usd, { fontSize: fontSize.xs }]}>{usdValue > 0 ? formatUsd(usdValue) : '—'}</Text>
       </View>
     </View>
   );
@@ -127,22 +130,22 @@ const rowStyles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  iconText: { fontSize: 20, fontWeight: '700' },
+  iconText: { fontSize: 20, fontWeight: FONT_WEIGHT.heavy },
   info: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
-  name: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '600' },
+  name: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
   depegBadge: {
     backgroundColor: COLORS.danger + '33',
     borderRadius: BORDER_RADIUS.sm,
     paddingHorizontal: 5,
     paddingVertical: 1,
   },
-  depegText: { color: COLORS.danger, fontSize: 9, fontWeight: '700' },
+  depegText: { color: COLORS.danger, fontSize: 9, fontWeight: FONT_WEIGHT.heavy },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   price: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
-  change: { fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  change: { fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
   balanceCol: { alignItems: 'flex-end', gap: 2 },
-  balance: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  balance: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.heavy },
   usd: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs },
 });
 
@@ -150,6 +153,7 @@ const rowStyles = StyleSheet.create({
 
 function AddressCard({ chain, address }: { chain: string; address: string }) {
   const [copied, setCopied] = useState(false);
+  const { fontSize } = useScaledTheme();
   if (!address) return null;
 
   async function handleCopy() {
@@ -161,12 +165,12 @@ function AddressCard({ chain, address }: { chain: string; address: string }) {
   return (
     <View style={addrStyles.card}>
       <View style={addrStyles.row}>
-        <Text style={addrStyles.chain}>{chain.toUpperCase()}</Text>
+        <Text style={[addrStyles.chain, { fontSize: fontSize.xs }]}>{chain.toUpperCase()}</Text>
         <TouchableOpacity onPress={handleCopy} style={addrStyles.copyBtn}>
-          <Text style={addrStyles.copyText}>{copied ? '✅ Copied' : '📋 Copy'}</Text>
+          <Text style={[addrStyles.copyText, { fontSize: fontSize.xs }]}>{copied ? '✅ Copied' : '📋 Copy'}</Text>
         </TouchableOpacity>
       </View>
-      <Text style={addrStyles.address} numberOfLines={1} ellipsizeMode="middle">
+      <Text style={[addrStyles.address, { fontSize: fontSize.sm }]} numberOfLines={1} ellipsizeMode="middle">
         {address}
       </Text>
     </View>
@@ -183,7 +187,7 @@ const addrStyles = StyleSheet.create({
     gap: SPACING.xs,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chain: { color: COLORS.primary, fontSize: FONT_SIZE.xs, fontWeight: '700', letterSpacing: 1 },
+  chain: { color: COLORS.primary, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.heavy, letterSpacing: 1 },
   copyBtn: { padding: 4 },
   copyText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs },
   address: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontFamily: 'monospace' },
@@ -192,6 +196,7 @@ const addrStyles = StyleSheet.create({
 // ─── Quick actions ────────────────────────────────────────────────────────────
 
 function QuickActions() {
+  const { fontSize, scaleFont } = useScaledTheme();
   return (
     <View style={qaStyles.row}>
       {[
@@ -205,8 +210,8 @@ function QuickActions() {
           onPress={() => router.push(action.route)}
           activeOpacity={0.7}
         >
-          <Text style={qaStyles.icon}>{action.icon}</Text>
-          <Text style={qaStyles.label}>{action.label}</Text>
+          <Text style={[qaStyles.icon, { fontSize: scaleFont(22) }]}>{action.icon}</Text>
+          <Text style={[qaStyles.label, { fontSize: fontSize.xs }]}>{action.label}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -227,7 +232,7 @@ const qaStyles = StyleSheet.create({
     gap: SPACING.xs,
   },
   icon: { fontSize: 22, color: COLORS.primary },
-  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -245,6 +250,7 @@ export default function Dashboard() {
     setPricesLoading,
     lock,
   } = useAppStore();
+  const { fontSize, contentSize, navSize, scaleFont } = useScaledTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -307,27 +313,27 @@ export default function Dashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.username}>{username ?? 'Wallet'}</Text>
+            <Text style={[styles.greeting, { fontSize: fontSize.sm }]}>Welcome back,</Text>
+            <Text style={[styles.username, { fontSize: fontSize.xl }]}>{username ?? 'Wallet'}</Text>
           </View>
           <View style={styles.statusCol}>
             {updating ? (
-              <Text style={styles.statusText}>Syncing…</Text>
+              <Text style={[styles.statusText, { fontSize: fontSize.xs }]}>Syncing…</Text>
             ) : lastUpdated ? (
-              <Text style={styles.statusText}>
+              <Text style={[styles.statusText, { fontSize: fontSize.xs }]}>
                 {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
             ) : null}
             <View style={styles.badgeRow}>
               <View style={styles.custodyBadge}>
-                <Text style={styles.custodyText}>🔐 Self-custody</Text>
+                <Text style={[styles.custodyText, { fontSize: scaleFont(10) }]}>🔐 Self-custody</Text>
               </View>
               <TouchableOpacity
                 style={styles.lockBtn}
                 onPress={() => { lock(); router.replace('/(auth)/unlock'); }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.lockBtnText}>🔒 Lock</Text>
+                <Text style={[styles.lockBtnText, { fontSize: scaleFont(10) }]}>🔒 Lock</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -344,7 +350,7 @@ export default function Dashboard() {
 
         {/* Assets */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Assets</Text>
+          <Text style={[styles.sectionLabel, { fontSize: navSize.xs }]}>Assets</Text>
           <View style={styles.coinList}>
             {COIN_LIST.map((c) => (
               <CoinRow key={c.symbol} symbol={c.symbol} />
@@ -355,8 +361,8 @@ export default function Dashboard() {
         {/* Addresses */}
         {addresses && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Receiving Addresses</Text>
-            <Text style={styles.addrNote}>
+            <Text style={[styles.sectionLabel, { fontSize: navSize.xs }]}>Receiving Addresses</Text>
+            <Text style={[styles.addrNote, { fontSize: contentSize.xs }]}>
               ⚠️ Only send the matching asset to each address. Sending the wrong
               asset may result in permanent loss.
             </Text>
@@ -371,7 +377,7 @@ export default function Dashboard() {
 
         {/* Security reminder */}
         <View style={styles.caution}>
-          <Text style={styles.cautionText}>
+          <Text style={[styles.cautionText, { fontSize: contentSize.xs }]}>
             ⚠️ Crypto transactions are irreversible. Always verify the recipient
             address before sending. AllIn Wallet cannot recover lost funds.
           </Text>
@@ -387,7 +393,7 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greeting: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
-  username: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  username: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy },
   statusCol: { alignItems: 'flex-end', gap: SPACING.xs },
   statusText: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
@@ -399,7 +405,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.success + '44',
   },
-  custodyText: { color: COLORS.success, fontSize: 10, fontWeight: '600' },
+  custodyText: { color: COLORS.success, fontSize: 10, fontWeight: FONT_WEIGHT.bold },
   lockBtn: {
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.full,
@@ -408,13 +414,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  lockBtnText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600' },
+  lockBtnText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: FONT_WEIGHT.bold },
 
   section: { gap: SPACING.sm },
   sectionLabel: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },

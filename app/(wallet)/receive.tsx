@@ -11,7 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useAppStore } from '../../src/store/appStore';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 import { COINS, COIN_LIST } from '../../src/constants/coins';
 
 type ChainTab = 'bitcoin' | 'ethereum' | 'solana';
@@ -28,6 +29,7 @@ function chainAssets(chain: ChainTab) {
 
 export default function ReceiveScreen() {
   const { addresses, walletType } = useAppStore();
+  const { fontSize, contentSize, navSize, scaleFont, uiScale } = useScaledTheme();
   const [chain, setChain] = useState<ChainTab>('solana');
   const [copied, setCopied] = useState(false);
 
@@ -54,8 +56,8 @@ export default function ReceiveScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Receive</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Receive</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           Share your address to receive crypto. Only send the correct asset to
           each address.
         </Text>
@@ -68,7 +70,7 @@ export default function ReceiveScreen() {
               style={[styles.tab, chain === c.id && { borderBottomColor: c.color }]}
               onPress={() => { setChain(c.id); setCopied(false); }}
             >
-              <Text style={[styles.tabText, chain === c.id && { color: c.color }]}>
+              <Text style={[styles.tabText, chain === c.id && { color: c.color }, { fontSize: navSize.sm }]}>
                 {c.icon} {c.label}
               </Text>
             </TouchableOpacity>
@@ -77,14 +79,14 @@ export default function ReceiveScreen() {
 
         {isUnavailable ? (
           <View style={styles.unavailable}>
-            <Text style={styles.unavailableText}>
+            <Text style={[styles.unavailableText, { fontSize: contentSize.sm }]}>
               ℹ️ Solana Seeker / Saga wallets only support the Solana network.
               BTC and ETH addresses are not available with a phone-key wallet.
             </Text>
           </View>
         ) : !address ? (
           <View style={styles.unavailable}>
-            <Text style={styles.unavailableText}>No address found. Reload the app.</Text>
+            <Text style={[styles.unavailableText, { fontSize: contentSize.sm }]}>No address found. Reload the app.</Text>
           </View>
         ) : (
           <>
@@ -99,7 +101,7 @@ export default function ReceiveScreen() {
                 />
               </View>
               <View style={[styles.chainBadge, { backgroundColor: chainConfig.color + '22' }]}>
-                <Text style={[styles.chainBadgeText, { color: chainConfig.color }]}>
+                <Text style={[styles.chainBadgeText, { color: chainConfig.color, fontSize: fontSize.sm }]}>
                   {chainConfig.icon} {chainConfig.label} Network
                 </Text>
               </View>
@@ -107,12 +109,12 @@ export default function ReceiveScreen() {
 
             {/* Address */}
             <View style={styles.addrCard}>
-              <Text style={styles.addrLabel}>Your {chainConfig.label} Address</Text>
-              <Text style={styles.addrText} selectable>
+              <Text style={[styles.addrLabel, { fontSize: navSize.xs }]}>Your {chainConfig.label} Address</Text>
+              <Text style={[styles.addrText, { fontSize: fontSize.sm }]} selectable>
                 {address}
               </Text>
               <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.7}>
-                <Text style={styles.copyBtnText}>
+                <Text style={[styles.copyBtnText, { fontSize: fontSize.md }]}>
                   {copied ? '✅ Copied to clipboard!' : '📋 Copy Address'}
                 </Text>
               </TouchableOpacity>
@@ -120,22 +122,22 @@ export default function ReceiveScreen() {
 
             {/* Accepted assets */}
             <View style={styles.assetsBox}>
-              <Text style={styles.assetsTitle}>Accepted on this address</Text>
+              <Text style={[styles.assetsTitle, { fontSize: navSize.sm }]}>Accepted on this address</Text>
               {assets.map((coin) => (
                 <View key={coin.symbol} style={styles.assetRow}>
-                  <View style={[styles.assetIcon, { backgroundColor: coin.color + '22' }]}>
-                    <Text style={[styles.assetIconText, { color: coin.color }]}>{coin.icon}</Text>
+                  <View style={[styles.assetIcon, { backgroundColor: coin.color + '22', width: 28 * uiScale, height: 28 * uiScale, borderRadius: 14 * uiScale }]}>
+                    <Text style={[styles.assetIconText, { color: coin.color, fontSize: scaleFont(14) }]}>{coin.icon}</Text>
                   </View>
-                  <Text style={styles.assetName}>{coin.name}</Text>
-                  <Text style={styles.assetChain}>{coin.chain}</Text>
+                  <Text style={[styles.assetName, { fontSize: fontSize.sm }]}>{coin.name}</Text>
+                  <Text style={[styles.assetChain, { fontSize: fontSize.xs }]}>{coin.chain}</Text>
                 </View>
               ))}
             </View>
 
             {/* Warning */}
             <View style={styles.warning}>
-              <Text style={styles.warningTitle}>⚠️ Important</Text>
-              <Text style={styles.warningText}>
+              <Text style={[styles.warningTitle, { fontSize: fontSize.sm }]}>⚠️ Important</Text>
+              <Text style={[styles.warningText, { fontSize: contentSize.sm }]}>
                 • Only send {chainConfig.label}-based assets to this address.
                 {'\n'}• Sending assets from a different chain (e.g. ETH to a
                 Bitcoin address) will result in permanent loss of funds.
@@ -152,7 +154,7 @@ export default function ReceiveScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxl },
-  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: '800' },
+  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, lineHeight: 20 },
 
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.border },
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabText: { color: COLORS.textMuted, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  tabText: { color: COLORS.textMuted, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
 
   unavailable: {
     backgroundColor: COLORS.bgCard,
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
   },
-  chainBadgeText: { fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  chainBadgeText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.heavy },
 
   addrCard: {
     backgroundColor: COLORS.bgCard,
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     alignItems: 'center',
   },
-  addrLabel: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  addrLabel: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.heavy, letterSpacing: 1, textTransform: 'uppercase' },
   addrText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.sm,
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  copyBtnText: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  copyBtnText: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.heavy },
 
   assetsBox: {
     backgroundColor: COLORS.bgCard,
@@ -222,7 +224,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     gap: SPACING.sm,
   },
-  assetsTitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  assetsTitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.heavy },
   assetRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -235,8 +237,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  assetIconText: { fontSize: 14, fontWeight: '700' },
-  assetName: { color: COLORS.text, fontSize: FONT_SIZE.sm, flex: 1, fontWeight: '500' },
+  assetIconText: { fontSize: 14, fontWeight: FONT_WEIGHT.heavy },
+  assetName: { color: COLORS.text, fontSize: FONT_SIZE.sm, flex: 1, fontWeight: FONT_WEIGHT.medium },
   assetChain: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
 
   warning: {
@@ -247,6 +249,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.danger + '55',
     gap: SPACING.sm,
   },
-  warningTitle: { color: COLORS.danger, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  warningTitle: { color: COLORS.danger, fontWeight: FONT_WEIGHT.heavy, fontSize: FONT_SIZE.sm },
   warningText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, lineHeight: 20 },
 });

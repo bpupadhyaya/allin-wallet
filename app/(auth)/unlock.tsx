@@ -25,14 +25,16 @@ import { verifyPin, verifyPassword } from '../../src/services/storage';
 import { PinPad } from '../../src/components/PinPad';
 import { Input } from '../../src/components/Input';
 import { Button } from '../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { DevShortcut } from '../../src/components/DevShortcut';
 import { DEV_PIN } from '../../src/constants/config';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 type Mode = 'pin' | 'password';
 
 export default function UnlockScreen() {
   const { unlock, logout, username } = useAppStore();
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
   const [mode, setMode] = useState<Mode>('pin');
   const [pinError, setPinError] = useState('');
   const [password, setPassword] = useState('');
@@ -120,10 +122,10 @@ export default function UnlockScreen() {
       >
         {/* Branding */}
         <View style={styles.header}>
-          <Text style={styles.logo}>⬡</Text>
-          <Text style={styles.title}>Wallet Locked</Text>
+          <Text style={[styles.logo, { fontSize: scaleFont(52) }]}>⬡</Text>
+          <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Wallet Locked</Text>
           {username ? (
-            <Text style={styles.subtitle}>Welcome back, {username}</Text>
+            <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>Welcome back, {username}</Text>
           ) : null}
         </View>
 
@@ -134,10 +136,10 @@ export default function UnlockScreen() {
             onPress={handleBiometric}
             activeOpacity={0.7}
           >
-            <Text style={styles.biometricIcon}>
+            <Text style={[styles.biometricIcon, { fontSize: scaleFont(24) }]}>
               {bioLabel === 'Face ID' ? '🔭' : '👆'}
             </Text>
-            <Text style={styles.biometricText}>Unlock with {bioLabel}</Text>
+            <Text style={[styles.biometricText, { fontSize: fontSize.md }]}>Unlock with {bioLabel}</Text>
           </TouchableOpacity>
         )}
 
@@ -153,7 +155,7 @@ export default function UnlockScreen() {
                 setPwError('');
               }}
             >
-              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
+              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive, { fontSize: fontSize.sm }]}>
                 {m === 'pin' ? '🔢 PIN' : '🔑 Password'}
               </Text>
             </TouchableOpacity>
@@ -195,7 +197,7 @@ export default function UnlockScreen() {
 
         {/* Sign out link */}
         <TouchableOpacity style={styles.signOutLink} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign out →</Text>
+          <Text style={[styles.signOutText, { fontSize: fontSize.sm }]}>Sign out →</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -216,7 +218,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
   },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
 
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
   biometricText: {
     color: COLORS.primary,
     fontSize: FONT_SIZE.md,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
   },
 
   toggleRow: {
@@ -255,7 +257,7 @@ const styles = StyleSheet.create({
   toggleText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
   },
   toggleTextActive: { color: COLORS.text },
 

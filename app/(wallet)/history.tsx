@@ -14,13 +14,15 @@ import { useAppStore, type TxRecord } from '../../src/store/appStore';
 import { loadTxHistory } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS } from '../../src/constants/coins';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 type Filter = 'all' | 'swap' | 'send';
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: TxRecord['status'] }) {
+  const { scaleFont } = useScaledTheme();
   const config = {
     pending: { color: COLORS.warning, label: 'Pending', bg: '#2A1A00' },
     confirmed: { color: COLORS.success, label: 'Confirmed', bg: '#0A1A12' },
@@ -29,7 +31,7 @@ function StatusBadge({ status }: { status: TxRecord['status'] }) {
 
   return (
     <View style={[badge.wrap, { backgroundColor: config.bg, borderColor: config.color + '55' }]}>
-      <Text style={[badge.text, { color: config.color }]}>{config.label}</Text>
+      <Text style={[badge.text, { color: config.color, fontSize: scaleFont(10) }]}>{config.label}</Text>
     </View>
   );
 }
@@ -41,12 +43,13 @@ const badge = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  text: { fontSize: 10, fontWeight: '700' },
+  text: { fontSize: 10, fontWeight: FONT_WEIGHT.heavy },
 });
 
 // ─── Transaction row ──────────────────────────────────────────────────────────
 
 function TxRow({ tx, prices }: { tx: TxRecord; prices: Record<string, number> }) {
+  const { fontSize, scaleFont, uiScale } = useScaledTheme();
   const fromCoin = COINS[tx.fromCoin];
   const toCoin = COINS[tx.toCoin];
   const isSwap = tx.type === 'swap';
@@ -60,14 +63,14 @@ function TxRow({ tx, prices }: { tx: TxRecord; prices: Record<string, number> })
       activeOpacity={0.7}
     >
       {/* Type icon */}
-      <View style={[rowStyles.typeIcon, { backgroundColor: isSwap ? COLORS.primary + '22' : COLORS.secondary + '22' }]}>
-        <Text style={rowStyles.typeEmoji}>{isSwap ? '⇄' : '↑'}</Text>
+      <View style={[rowStyles.typeIcon, { backgroundColor: isSwap ? COLORS.primary + '22' : COLORS.secondary + '22', width: 40 * uiScale, height: 40 * uiScale, borderRadius: 20 * uiScale }]}>
+        <Text style={[rowStyles.typeEmoji, { fontSize: scaleFont(18) }]}>{isSwap ? '⇄' : '↑'}</Text>
       </View>
 
       {/* Main info */}
       <View style={rowStyles.info}>
         <View style={rowStyles.topRow}>
-          <Text style={rowStyles.description}>
+          <Text style={[rowStyles.description, { fontSize: fontSize.md }]}>
             {isSwap
               ? `${tx.fromCoin.replace('_', ' ')} → ${tx.toCoin.replace('_', ' ')}`
               : `Send ${tx.fromCoin.replace('_', ' ')}`}
@@ -76,11 +79,11 @@ function TxRow({ tx, prices }: { tx: TxRecord; prices: Record<string, number> })
         </View>
 
         <View style={rowStyles.amountRow}>
-          <Text style={rowStyles.amount}>
+          <Text style={[rowStyles.amount, { fontSize: fontSize.sm }]}>
             -{tx.fromAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.fromCoin.replace('_', ' ')}
           </Text>
           {isSwap && (
-            <Text style={rowStyles.received}>
+            <Text style={[rowStyles.received, { fontSize: fontSize.sm }]}>
               +{tx.toAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.toCoin.replace('_', ' ')}
             </Text>
           )}
@@ -101,7 +104,7 @@ function TxRow({ tx, prices }: { tx: TxRecord; prices: Record<string, number> })
         </View>
 
         {isSwap && tx.route && (
-          <Text style={rowStyles.route}>via {tx.route}</Text>
+          <Text style={[rowStyles.route, { fontSize: fontSize.xs }]}>via {tx.route}</Text>
         )}
       </View>
 
@@ -131,10 +134,10 @@ const rowStyles = StyleSheet.create({
   typeEmoji: { fontSize: 18 },
   info: { flex: 1, gap: 4 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  description: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '600' },
+  description: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
   amountRow: { flexDirection: 'row', gap: SPACING.md },
-  amount: { color: COLORS.danger, fontSize: FONT_SIZE.sm, fontWeight: '600' },
-  received: { color: COLORS.success, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  amount: { color: COLORS.danger, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+  received: { color: COLORS.success, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   meta: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   route: { color: COLORS.primary, fontSize: FONT_SIZE.xs },
@@ -144,6 +147,7 @@ const rowStyles = StyleSheet.create({
 // ─── Filter tabs ──────────────────────────────────────────────────────────────
 
 function FilterTabs({ active, onChange }: { active: Filter; onChange: (f: Filter) => void }) {
+  const { navSize } = useScaledTheme();
   const tabs: { key: Filter; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'swap', label: 'Swaps' },
@@ -157,7 +161,7 @@ function FilterTabs({ active, onChange }: { active: Filter; onChange: (f: Filter
           style={[tabStyles.tab, active === t.key && tabStyles.active]}
           onPress={() => onChange(t.key)}
         >
-          <Text style={[tabStyles.text, active === t.key && tabStyles.activeText]}>
+          <Text style={[tabStyles.text, active === t.key && tabStyles.activeText, { fontSize: navSize.sm }]}>
             {t.label}
           </Text>
         </TouchableOpacity>
@@ -181,7 +185,7 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
   },
   active: { backgroundColor: COLORS.primary },
-  text: { color: COLORS.textMuted, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  text: { color: COLORS.textMuted, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   activeText: { color: COLORS.text },
 });
 
@@ -189,6 +193,7 @@ const tabStyles = StyleSheet.create({
 
 export default function HistoryScreen() {
   const { recentTxs, setRecentTxs, prices } = useAppStore();
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
   const [filter, setFilter] = useState<Filter>('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -214,8 +219,8 @@ export default function HistoryScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>History</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { fontSize: fontSize.xxl }]}>History</Text>
+          <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
             {recentTxs.length} transaction{recentTxs.length !== 1 ? 's' : ''} · Tap to view on explorer
           </Text>
         </View>
@@ -226,9 +231,9 @@ export default function HistoryScreen() {
         {/* List */}
         {filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>📭</Text>
-            <Text style={styles.emptyTitle}>No transactions yet</Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptyIcon, { fontSize: scaleFont(56) }]}>📭</Text>
+            <Text style={[styles.emptyTitle, { fontSize: fontSize.xl }]}>No transactions yet</Text>
+            <Text style={[styles.emptySubtitle, { fontSize: contentSize.sm }]}>
               Your swaps and sends will appear here.
             </Text>
           </View>
@@ -252,7 +257,7 @@ export default function HistoryScreen() {
 
         {/* Note */}
         <View style={styles.note}>
-          <Text style={styles.noteText}>
+          <Text style={[styles.noteText, { fontSize: contentSize.xs }]}>
             ℹ️ Only transactions made in this app are shown. History is stored
             locally on this device. Tap any transaction to open it in a block
             explorer.
@@ -267,7 +272,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   container: { flex: 1, padding: SPACING.lg, gap: SPACING.md },
   header: { gap: SPACING.xs },
-  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: '800' },
+  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
   list: { flex: 1 },
   listContent: {
@@ -285,7 +290,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl,
   },
   emptyIcon: { fontSize: 56 },
-  emptyTitle: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: '700' },
+  emptyTitle: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy },
   emptySubtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, textAlign: 'center' },
   note: {
     backgroundColor: COLORS.bgCard,

@@ -12,10 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { generateMnemonic, mnemonicToWords } from '../../../src/crypto/mnemonic';
 import { useAppStore } from '../../../src/store/appStore';
 import { Button } from '../../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 export default function SeedGenerate() {
   const { setPendingMnemonic } = useAppStore();
+  const { fontSize, contentSize } = useScaledTheme();
   const [words, setWords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,15 +43,15 @@ export default function SeedGenerate() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Your Seed Phrase</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Your Seed Phrase</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           These 12 words are the master key to your wallet. Write them down in
           order and store them somewhere safe and offline.
         </Text>
 
         {/* Security warning */}
         <View style={styles.warning}>
-          <Text style={styles.warningText}>
+          <Text style={[styles.warningText, { fontSize: contentSize.sm }]}>
             ⚠️ Never take a screenshot or store this phrase digitally.
             Anyone with these words has full access to your funds.
           </Text>
@@ -59,8 +61,8 @@ export default function SeedGenerate() {
         <View style={styles.grid}>
           {words.map((word, i) => (
             <View key={i} style={styles.wordCard}>
-              <Text style={styles.wordNum}>{i + 1}</Text>
-              <Text style={styles.word}>{word}</Text>
+              <Text style={[styles.wordNum, { fontSize: fontSize.xs }]}>{i + 1}</Text>
+              <Text style={[styles.word, { fontSize: fontSize.sm }]}>{word}</Text>
             </View>
           ))}
         </View>
@@ -76,7 +78,7 @@ export default function SeedGenerate() {
           }}
         />
 
-        <Text style={styles.footerNote}>
+        <Text style={[styles.footerNote, { fontSize: contentSize.xs }]}>
           The next step will ask you to confirm these words.
         </Text>
       </ScrollView>
@@ -91,7 +93,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   subtitle: {
@@ -137,7 +139,7 @@ const styles = StyleSheet.create({
   word: {
     color: COLORS.text,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
     flex: 1,
   },
   footerNote: {

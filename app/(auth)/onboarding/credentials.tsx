@@ -32,12 +32,13 @@ import { Input } from '../../../src/components/Input';
 import { Button } from '../../../src/components/Button';
 import { PinPad } from '../../../src/components/PinPad';
 import { DevShortcut } from '../../../src/components/DevShortcut';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import {
   DEV_USERNAME,
   DEV_PASSWORD,
   DEV_PIN,
 } from '../../../src/constants/config';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 type Step = 'credentials' | 'pin' | 'confirm-pin';
 
@@ -58,6 +59,7 @@ export default function CredentialsSetup() {
     setPendingMnemonic,
     setPendingSagaPubkey,
   } = useAppStore();
+  const { fontSize, contentSize } = useScaledTheme();
 
   const [step, setStep] = useState<Step>('credentials');
   const [username, setUsername] = useState('');
@@ -180,14 +182,14 @@ export default function CredentialsSetup() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {step === 'credentials' && (
           <>
-            <Text style={styles.title}>Secure Your Wallet</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Secure Your Wallet</Text>
+            <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
               Set a username and strong password. These protect access to your
               wallet on this device.
             </Text>
 
             <View style={styles.notice}>
-              <Text style={styles.noticeText}>
+              <Text style={[styles.noticeText, { fontSize: contentSize.sm }]}>
                 🔒 Your password is hashed locally and never transmitted.
                 AllIn cannot reset your password. Store it somewhere safe.
               </Text>
@@ -264,7 +266,7 @@ export default function CredentialsSetup() {
 
         {saving ? (
           <View style={styles.savingOverlay}>
-            <Text style={styles.savingText}>Setting up wallet…</Text>
+            <Text style={[styles.savingText, { fontSize: contentSize.sm }]}>Setting up wallet…</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   subtitle: {

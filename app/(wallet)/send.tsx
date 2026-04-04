@@ -51,7 +51,8 @@ import { saveTxRecord, updateTxRecord } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { getRpc, getExplorerTxUrl } from '../../src/constants/config';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 const ALL_SENDABLE: CoinSymbol[] = [
   'BTC', 'ETH', 'SOL', 'USDC_ETH', 'USDT_ETH', 'USDC_SOL', 'USDT_SOL',
@@ -70,11 +71,12 @@ function CoinPickerModal({
   onSelect: (s: CoinSymbol) => void;
   onClose: () => void;
 }) {
+  const { fontSize, scaleFont, uiScale } = useScaledTheme();
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={m.overlay}>
         <View style={m.sheet}>
-          <Text style={m.title}>Select Asset</Text>
+          <Text style={[m.title, { fontSize: fontSize.lg }]}>Select Asset</Text>
           <ScrollView>
             {COIN_LIST.filter((c) => ALL_SENDABLE.includes(c.symbol)).map((coin) => (
               <TouchableOpacity
@@ -83,12 +85,12 @@ function CoinPickerModal({
                 onPress={() => { onSelect(coin.symbol); onClose(); }}
                 activeOpacity={0.7}
               >
-                <View style={[m.icon, { backgroundColor: coin.color + '22' }]}>
-                  <Text style={[m.iconText, { color: coin.color }]}>{coin.icon}</Text>
+                <View style={[m.icon, { backgroundColor: coin.color + '22', width: 40 * uiScale, height: 40 * uiScale, borderRadius: 20 * uiScale }]}>
+                  <Text style={[m.iconText, { color: coin.color, fontSize: scaleFont(20) }]}>{coin.icon}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={m.name}>{coin.name}</Text>
-                  <Text style={m.chain}>{coin.chain}</Text>
+                  <Text style={[m.name, { fontSize: fontSize.md }]}>{coin.name}</Text>
+                  <Text style={[m.chain, { fontSize: fontSize.xs }]}>{coin.chain}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -112,7 +114,7 @@ const m = StyleSheet.create({
     maxHeight: '70%',
     gap: SPACING.md,
   },
-  title: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: '700', textAlign: 'center' },
+  title: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy, textAlign: 'center' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -122,8 +124,8 @@ const m = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  iconText: { fontSize: 20, fontWeight: '700' },
-  name: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '600' },
+  iconText: { fontSize: 20, fontWeight: FONT_WEIGHT.heavy },
+  name: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
   chain: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   closeBtn: {
     backgroundColor: COLORS.bgCard,
@@ -131,7 +133,7 @@ const m = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'center',
   },
-  closeBtnText: { color: COLORS.textSecondary, fontWeight: '600' },
+  closeBtnText: { color: COLORS.textSecondary, fontWeight: FONT_WEIGHT.bold },
 });
 
 // ─── Fee speed row ────────────────────────────────────────────────────────────
@@ -147,6 +149,7 @@ function FeeSpeedRow({
   rates: BtcFeeRates;
   numInputs: number;
 }) {
+  const { fontSize, scaleFont } = useScaledTheme();
   const options: { key: FeeSpeed; label: string; icon: string; rate: number }[] = [
     { key: 'slow', label: '~1 hr', icon: '🐢', rate: rates.slow },
     { key: 'standard', label: '~30 min', icon: '⚡', rate: rates.standard },
@@ -165,12 +168,12 @@ function FeeSpeedRow({
             onPress={() => onSelect(opt.key)}
             activeOpacity={0.7}
           >
-            <Text style={feeStyles.cardIcon}>{opt.icon}</Text>
-            <Text style={[feeStyles.cardLabel, active && feeStyles.cardLabelActive]}>
+            <Text style={[feeStyles.cardIcon, { fontSize: scaleFont(18) }]}>{opt.icon}</Text>
+            <Text style={[feeStyles.cardLabel, active && feeStyles.cardLabelActive, { fontSize: fontSize.xs }]}>
               {opt.label}
             </Text>
-            <Text style={feeStyles.cardRate}>{opt.rate} sat/vB</Text>
-            <Text style={feeStyles.cardFee}>{feeBtc.toFixed(8)} BTC</Text>
+            <Text style={[feeStyles.cardRate, { fontSize: scaleFont(10) }]}>{opt.rate} sat/vB</Text>
+            <Text style={[feeStyles.cardFee, { fontSize: scaleFont(10) }]}>{feeBtc.toFixed(8)} BTC</Text>
           </TouchableOpacity>
         );
       })}
@@ -192,16 +195,17 @@ const feeStyles = StyleSheet.create({
   },
   cardActive: { borderColor: COLORS.primary, backgroundColor: COLORS.bgTertiary },
   cardIcon: { fontSize: 18 },
-  cardLabel: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  cardLabel: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.bold },
   cardLabelActive: { color: COLORS.primary },
   cardRate: { color: COLORS.textMuted, fontSize: 10 },
-  cardFee: { color: COLORS.text, fontSize: 10, fontWeight: '600' },
+  cardFee: { color: COLORS.text, fontSize: 10, fontWeight: FONT_WEIGHT.bold },
 });
 
 // ─── Main send screen ─────────────────────────────────────────────────────────
 
 export default function SendScreen() {
   const { balances, prices, addresses, addTxRecord, updateTxStatus } = useAppStore();
+  const { fontSize, contentSize, navSize, scaleFont, uiScale } = useScaledTheme();
   const [coin, setCoin] = useState<CoinSymbol>('SOL');
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -424,17 +428,17 @@ export default function SendScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successScreen}>
-          <Text style={styles.successIcon}>✅</Text>
-          <Text style={styles.successTitle}>Sent!</Text>
-          <Text style={styles.successHash} selectable numberOfLines={2}>{txHash}</Text>
+          <Text style={[styles.successIcon, { fontSize: scaleFont(64) }]}>✅</Text>
+          <Text style={[styles.successTitle, { fontSize: fontSize.xxl }]}>Sent!</Text>
+          <Text style={[styles.successHash, { fontSize: fontSize.sm }]} selectable numberOfLines={2}>{txHash}</Text>
           <TouchableOpacity onPress={() => Linking.openURL(explorerUrl)}>
-            <Text style={styles.explorerLink}>View on explorer →</Text>
+            <Text style={[styles.explorerLink, { fontSize: fontSize.sm }]}>View on explorer →</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.doneBtn}
             onPress={() => { setTxHash(''); setExplorerUrl(''); }}
           >
-            <Text style={styles.doneBtnText}>Send Another</Text>
+            <Text style={[styles.doneBtnText, { fontSize: fontSize.md }]}>Send Another</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -444,11 +448,11 @@ export default function SendScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Send</Text>
-        <Text style={styles.subtitle}>Signed locally · Broadcast directly</Text>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Send</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>Signed locally · Broadcast directly</Text>
 
         <View style={styles.notice}>
-          <Text style={styles.noticeText}>
+          <Text style={[styles.noticeText, { fontSize: contentSize.xs }]}>
             🔐 Private key never leaves this device. Verify the recipient
             address carefully — crypto transfers are irreversible.
           </Text>
@@ -456,20 +460,20 @@ export default function SendScreen() {
 
         {/* Asset */}
         <View style={styles.field}>
-          <Text style={styles.label}>Asset</Text>
+          <Text style={[styles.label, { fontSize: fontSize.sm }]}>Asset</Text>
           <TouchableOpacity
             style={styles.coinSelector}
             onPress={() => setPicking(true)}
             activeOpacity={0.7}
           >
-            <View style={[styles.coinIcon, { backgroundColor: coinConfig.color + '22' }]}>
-              <Text style={[styles.coinIconText, { color: coinConfig.color }]}>
+            <View style={[styles.coinIcon, { backgroundColor: coinConfig.color + '22', width: 36 * uiScale, height: 36 * uiScale, borderRadius: 18 * uiScale }]}>
+              <Text style={[styles.coinIconText, { color: coinConfig.color, fontSize: scaleFont(18) }]}>
                 {coinConfig.icon}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.coinName}>{coinConfig.name}</Text>
-              <Text style={styles.coinBalance}>
+              <Text style={[styles.coinName, { fontSize: fontSize.md }]}>{coinConfig.name}</Text>
+              <Text style={[styles.coinBalance, { fontSize: fontSize.xs }]}>
                 Balance: {balance.toLocaleString(undefined, { maximumFractionDigits: 8 })} {coin.replace('_', ' ')}
               </Text>
             </View>
@@ -479,7 +483,7 @@ export default function SendScreen() {
 
         {/* Recipient */}
         <View style={styles.field}>
-          <Text style={styles.label}>Recipient Address</Text>
+          <Text style={[styles.label, { fontSize: fontSize.sm }]}>Recipient Address</Text>
           <TextInput
             style={[styles.input, addressError ? styles.inputError : null]}
             placeholder={
@@ -493,15 +497,15 @@ export default function SendScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {addressError ? <Text style={styles.fieldError}>{addressError}</Text> : null}
+          {addressError ? <Text style={[styles.fieldError, { fontSize: fontSize.xs }]}>{addressError}</Text> : null}
         </View>
 
         {/* Amount */}
         <View style={styles.field}>
           <View style={styles.labelRow}>
-            <Text style={styles.label}>Amount</Text>
+            <Text style={[styles.label, { fontSize: fontSize.sm }]}>Amount</Text>
             <TouchableOpacity onPress={() => setAmount(balance.toString())}>
-              <Text style={styles.maxBtn}>MAX</Text>
+              <Text style={[styles.maxBtn, { fontSize: fontSize.xs }]}>MAX</Text>
             </TouchableOpacity>
           </View>
           <TextInput
@@ -513,16 +517,16 @@ export default function SendScreen() {
             keyboardType="decimal-pad"
           />
           {amountError ? (
-            <Text style={styles.fieldError}>{amountError}</Text>
+            <Text style={[styles.fieldError, { fontSize: fontSize.xs }]}>{amountError}</Text>
           ) : amount ? (
-            <Text style={styles.usdHint}>≈ {formatUsd(usdValue)}</Text>
+            <Text style={[styles.usdHint, { fontSize: fontSize.xs }]}>≈ {formatUsd(usdValue)}</Text>
           ) : null}
         </View>
 
         {/* BTC fee selector */}
         {coinConfig.chain === 'bitcoin' && (
           <View style={styles.field}>
-            <Text style={styles.label}>Network Fee</Text>
+            <Text style={[styles.label, { fontSize: fontSize.sm }]}>Network Fee</Text>
             {loadingFees ? (
               <ActivityIndicator color={COLORS.primary} />
             ) : btcFeeRates ? (
@@ -533,7 +537,7 @@ export default function SendScreen() {
                 numInputs={btcUtxoCount}
               />
             ) : (
-              <Text style={styles.feeNote}>Could not load fee rates. Default 10 sat/vbyte.</Text>
+              <Text style={[styles.feeNote, { fontSize: contentSize.xs }]}>Could not load fee rates. Default 10 sat/vbyte.</Text>
             )}
           </View>
         )}
@@ -541,8 +545,8 @@ export default function SendScreen() {
         {/* ETH fee estimate */}
         {coinConfig.chain === 'ethereum' && ethFeeEth !== null && (
           <View style={styles.feeEstimate}>
-            <Text style={styles.feeEstimateLabel}>Estimated fee</Text>
-            <Text style={styles.feeEstimateValue}>
+            <Text style={[styles.feeEstimateLabel, { fontSize: fontSize.sm }]}>Estimated fee</Text>
+            <Text style={[styles.feeEstimateValue, { fontSize: fontSize.sm }]}>
               ~{ethFeeEth.toFixed(6)} ETH
               {prices.ETH > 0 ? ` (${formatUsd(toUsd(ethFeeEth, prices.ETH))})` : ''}
             </Text>
@@ -552,14 +556,14 @@ export default function SendScreen() {
         {/* SOL fee estimate */}
         {coinConfig.chain === 'solana' && (
           <View style={styles.feeEstimate}>
-            <Text style={styles.feeEstimateLabel}>Estimated fee</Text>
-            <Text style={styles.feeEstimateValue}>~{SOL_TX_FEE} SOL (negligible)</Text>
+            <Text style={[styles.feeEstimateLabel, { fontSize: fontSize.sm }]}>Estimated fee</Text>
+            <Text style={[styles.feeEstimateValue, { fontSize: fontSize.sm }]}>~{SOL_TX_FEE} SOL (negligible)</Text>
           </View>
         )}
 
         {/* Warning */}
         <View style={styles.warning}>
-          <Text style={styles.warningText}>
+          <Text style={[styles.warningText, { fontSize: contentSize.sm }]}>
             ⚠️ Double-check the full recipient address before sending.
             Sent funds cannot be recovered.
           </Text>
@@ -567,7 +571,7 @@ export default function SendScreen() {
 
         {/* Send button */}
         <TouchableOpacity
-          style={[styles.sendBtn, sending && styles.sendBtnDisabled]}
+          style={[styles.sendBtn, sending && styles.sendBtnDisabled, { height: 56 * uiScale }]}
           onPress={handleSend}
           disabled={sending}
           activeOpacity={0.8}
@@ -575,7 +579,7 @@ export default function SendScreen() {
           {sending ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text style={styles.sendBtnText}>Send {coinConfig.name}</Text>
+            <Text style={[styles.sendBtnText, { fontSize: fontSize.lg }]}>Send {coinConfig.name}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -592,7 +596,7 @@ export default function SendScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxl },
-  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: '800' },
+  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
   notice: {
     backgroundColor: COLORS.bgCard,
@@ -603,9 +607,9 @@ const styles = StyleSheet.create({
   },
   noticeText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, lineHeight: 18 },
   field: { gap: SPACING.xs },
-  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '500' },
+  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  maxBtn: { color: COLORS.primary, fontSize: FONT_SIZE.xs, fontWeight: '700', textDecorationLine: 'underline' },
+  maxBtn: { color: COLORS.primary, fontSize: FONT_SIZE.xs, fontWeight: FONT_WEIGHT.heavy, textDecorationLine: 'underline' },
   input: {
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.md,
@@ -630,8 +634,8 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
   },
   coinIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  coinIconText: { fontSize: 18, fontWeight: '700' },
-  coinName: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '600' },
+  coinIconText: { fontSize: 18, fontWeight: FONT_WEIGHT.heavy },
+  coinName: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
   coinBalance: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   chevron: { color: COLORS.textMuted },
   feeNote: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
@@ -646,7 +650,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   feeEstimateLabel: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
-  feeEstimateValue: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  feeEstimateValue: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   warning: {
     backgroundColor: '#1A0A0A',
     borderRadius: BORDER_RADIUS.md,
@@ -663,7 +667,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.5 },
-  sendBtnText: { color: '#000', fontSize: FONT_SIZE.lg, fontWeight: '800' },
+  sendBtnText: { color: '#000', fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy },
   // Success
   successScreen: {
     flex: 1,
@@ -673,7 +677,7 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   successIcon: { fontSize: 64 },
-  successTitle: { color: COLORS.text, fontSize: FONT_SIZE.xxl, fontWeight: '800' },
+  successTitle: { color: COLORS.text, fontSize: FONT_SIZE.xxl, fontWeight: FONT_WEIGHT.heavy },
   successHash: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
@@ -687,5 +691,5 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xl,
   },
-  doneBtnText: { color: COLORS.text, fontWeight: '700', fontSize: FONT_SIZE.md },
+  doneBtnText: { color: COLORS.text, fontWeight: FONT_WEIGHT.heavy, fontSize: FONT_SIZE.md },
 });

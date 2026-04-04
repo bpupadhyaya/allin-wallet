@@ -8,7 +8,8 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { useScaledTheme } from '../hooks/useScaledTheme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -27,14 +28,15 @@ export function Input({
   style,
   ...rest
 }: InputProps) {
+  const { fontSize, scaleFont, uiScale } = useScaledTheme();
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.inputWrap, error ? styles.inputError : null]}>
+      {label ? <Text style={[styles.label, { fontSize: fontSize.sm }]}>{label}</Text> : null}
+      <View style={[styles.inputWrap, error ? styles.inputError : null, { height: 48 * uiScale }]}>
         <TextInput
-          style={[styles.input, style]}
+          style={[styles.input, { fontSize: fontSize.md }, style]}
           placeholderTextColor={COLORS.textMuted}
           secureTextEntry={isPassword && !showPassword}
           autoCapitalize="none"
@@ -47,12 +49,12 @@ export function Input({
             style={styles.eye}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+            <Text style={[styles.eyeIcon, { fontSize: scaleFont(16) }]}>{showPassword ? '🙈' : '👁'}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      {hint && !error ? <Text style={styles.hintText}>{hint}</Text> : null}
+      {error ? <Text style={[styles.errorText, { fontSize: fontSize.xs }]}>{error}</Text> : null}
+      {hint && !error ? <Text style={[styles.hintText, { fontSize: fontSize.xs }]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -62,7 +64,7 @@ const styles = StyleSheet.create({
   label: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '500',
+    fontWeight: FONT_WEIGHT.medium,
   },
   inputWrap: {
     flexDirection: 'row',

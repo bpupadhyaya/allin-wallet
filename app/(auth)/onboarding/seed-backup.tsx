@@ -11,10 +11,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../../src/store/appStore';
 import { mnemonicToWords } from '../../../src/crypto/mnemonic';
 import { Button } from '../../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 export default function SeedBackup() {
   const { pendingMnemonic } = useAppStore();
+  const { fontSize, contentSize } = useScaledTheme();
   const [confirmed, setConfirmed] = useState(false);
 
   const words = pendingMnemonic ? mnemonicToWords(pendingMnemonic) : [];
@@ -22,15 +24,15 @@ export default function SeedBackup() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Back Up Your Seed Phrase</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Back Up Your Seed Phrase</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           Confirm you have written down all 12 words exactly as shown, in order.
         </Text>
 
         {/* Strong caution */}
         <View style={styles.cautionBox}>
-          <Text style={styles.cautionTitle}>🚨 Critical Security Warning</Text>
-          <Text style={styles.cautionText}>
+          <Text style={[styles.cautionTitle, { fontSize: fontSize.sm }]}>🚨 Critical Security Warning</Text>
+          <Text style={[styles.cautionText, { fontSize: contentSize.sm }]}>
             • If you lose your seed phrase, your funds are gone forever.{'\n'}
             • AllIn Wallet has zero ability to recover your wallet.{'\n'}
             • Write the words on paper — never store them digitally.{'\n'}
@@ -43,8 +45,8 @@ export default function SeedBackup() {
         <View style={styles.grid}>
           {words.map((word, i) => (
             <View key={i} style={styles.wordCard}>
-              <Text style={styles.wordNum}>{i + 1}</Text>
-              <Text style={styles.word}>{word}</Text>
+              <Text style={[styles.wordNum, { fontSize: fontSize.xs }]}>{i + 1}</Text>
+              <Text style={[styles.word, { fontSize: fontSize.sm }]}>{word}</Text>
             </View>
           ))}
         </View>
@@ -58,7 +60,7 @@ export default function SeedBackup() {
           <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
             {confirmed ? <Text style={styles.checkMark}>✓</Text> : null}
           </View>
-          <Text style={styles.checkLabel}>
+          <Text style={[styles.checkLabel, { fontSize: contentSize.sm }]}>
             I have written down all 12 words in the correct order and stored
             them in a safe, offline location.
           </Text>
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   subtitle: {
@@ -99,7 +101,7 @@ const styles = StyleSheet.create({
   },
   cautionTitle: {
     color: COLORS.danger,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     fontSize: FONT_SIZE.sm,
   },
   cautionText: {
@@ -128,7 +130,7 @@ const styles = StyleSheet.create({
   word: {
     color: COLORS.text,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
     flex: 1,
   },
   checkRow: {
@@ -151,7 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  checkMark: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
+  checkMark: { color: COLORS.text, fontSize: 14, fontWeight: FONT_WEIGHT.heavy },
   checkLabel: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,

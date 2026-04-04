@@ -7,7 +7,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Constants from 'expo-constants';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { useScaledTheme } from '../hooks/useScaledTheme';
 
 interface DevShortcutProps {
   label: string;
@@ -21,14 +22,15 @@ function isDevModeEnabled(): boolean {
 }
 
 export function DevShortcut({ label, actionLabel, onAction }: DevShortcutProps) {
+  const { fontSize } = useScaledTheme();
   if (!isDevModeEnabled()) return null;
 
   return (
     <View style={styles.banner}>
-      <Text style={styles.devBadge}>🛠 DEV MODE</Text>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.devBadge, { fontSize: fontSize.xs }]}>🛠 DEV MODE</Text>
+      <Text style={[styles.label, { fontSize: fontSize.sm }]}>{label}</Text>
       <TouchableOpacity style={styles.button} onPress={onAction} activeOpacity={0.8}>
-        <Text style={styles.buttonText}>{actionLabel}</Text>
+        <Text style={[styles.buttonText, { fontSize: fontSize.sm }]}>{actionLabel}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -47,7 +49,7 @@ const styles = StyleSheet.create({
   devBadge: {
     color: COLORS.devIndicator,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
   },
   label: {
@@ -64,6 +66,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
   },
 });

@@ -14,9 +14,10 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DevShortcut } from '../../../src/components/DevShortcut';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useAppStore } from '../../../src/store/appStore';
 import { DEV_MNEMONIC } from '../../../src/constants/config';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 interface OptionCardProps {
   icon: string;
@@ -37,6 +38,7 @@ function OptionCard({
   disabled,
   badge,
 }: OptionCardProps) {
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
   return (
     <TouchableOpacity
       style={[
@@ -49,20 +51,20 @@ function OptionCard({
       activeOpacity={disabled ? 1 : 0.75}
     >
       <View style={styles.cardLeft}>
-        <Text style={styles.cardIcon}>{icon}</Text>
+        <Text style={[styles.cardIcon, { fontSize: scaleFont(28) }]}>{icon}</Text>
       </View>
       <View style={styles.cardBody}>
         <View style={styles.cardTitleRow}>
-          <Text style={[styles.cardTitle, disabled && styles.cardTitleDisabled]}>
+          <Text style={[styles.cardTitle, disabled && styles.cardTitleDisabled, { fontSize: fontSize.md }]}>
             {title}
           </Text>
           {badge && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{badge}</Text>
+              <Text style={[styles.badgeText, { fontSize: scaleFont(9) }]}>{badge}</Text>
             </View>
           )}
         </View>
-        <Text style={styles.cardDesc}>{description}</Text>
+        <Text style={[styles.cardDesc, { fontSize: contentSize.xs }]}>{description}</Text>
       </View>
       {!disabled && <Text style={styles.cardChevron}>›</Text>}
     </TouchableOpacity>
@@ -71,6 +73,7 @@ function OptionCard({
 
 export default function OnboardingIndex() {
   const { setPendingMnemonic } = useAppStore();
+  const { fontSize, contentSize, navSize, scaleFont } = useScaledTheme();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -78,23 +81,23 @@ export default function OnboardingIndex() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>⬡</Text>
-          <Text style={styles.title}>AllIn Wallet</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.logo, { fontSize: scaleFont(52) }]}>⬡</Text>
+          <Text style={[styles.title, { fontSize: fontSize.xxxl }]}>AllIn Wallet</Text>
+          <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
             100% non-custodial · Your keys, your coins
           </Text>
         </View>
 
         {/* Security notice */}
         <View style={styles.notice}>
-          <Text style={styles.noticeText}>
+          <Text style={[styles.noticeText, { fontSize: contentSize.xs }]}>
             🔐 AllIn never has access to your funds. No one can recover your
             wallet if you lose your seed phrase or credentials.
           </Text>
         </View>
 
         {/* Options */}
-        <Text style={styles.sectionLabel}>Create or restore a wallet</Text>
+        <Text style={[styles.sectionLabel, { fontSize: navSize.xs }]}>Create or restore a wallet</Text>
 
         <OptionCard
           icon="📝"
@@ -125,7 +128,7 @@ export default function OnboardingIndex() {
           style={styles.loginLink}
           onPress={() => router.replace('/(auth)/login')}
         >
-          <Text style={styles.loginLinkText}>
+          <Text style={[styles.loginLinkText, { fontSize: fontSize.sm }]}>
             Already have an account?{' '}
             <Text style={styles.loginLinkAccent}>Sign in →</Text>
           </Text>
@@ -154,7 +157,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: -1,
   },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, textAlign: 'center' },
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginTop: SPACING.sm,
@@ -200,7 +203,7 @@ const styles = StyleSheet.create({
   cardIcon: { fontSize: 28 },
   cardBody: { flex: 1, gap: 3 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, flexWrap: 'wrap' },
-  cardTitle: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  cardTitle: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.heavy },
   cardTitleDisabled: { color: COLORS.textMuted },
   cardDesc: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, lineHeight: 17 },
   cardChevron: { color: COLORS.textMuted, fontSize: 22, flexShrink: 0 },
@@ -211,9 +214,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  badgeText: { color: COLORS.warning, fontSize: 9, fontWeight: '700' },
+  badgeText: { color: COLORS.warning, fontSize: 9, fontWeight: FONT_WEIGHT.heavy },
 
   loginLink: { alignItems: 'center', paddingVertical: SPACING.sm },
   loginLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
-  loginLinkAccent: { color: COLORS.primary, fontWeight: '700' },
+  loginLinkAccent: { color: COLORS.primary, fontWeight: FONT_WEIGHT.heavy },
 });

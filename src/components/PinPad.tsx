@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { useScaledTheme } from '../hooks/useScaledTheme';
 
 const ROWS = [
   ['1', '2', '3'],
@@ -26,6 +27,7 @@ export function PinPad({
   subtitle,
   error,
 }: PinPadProps) {
+  const { fontSize, contentSize, uiScale } = useScaledTheme();
   const [pin, setPin] = useState('');
 
   const handlePress = (digit: string) => {
@@ -47,8 +49,8 @@ export function PinPad({
 
   return (
     <View style={styles.container}>
-      {title ? <Text style={styles.title}>{title}</Text> : null}
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {title ? <Text style={[styles.title, { fontSize: fontSize.xl }]}>{title}</Text> : null}
+      {subtitle ? <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>{subtitle}</Text> : null}
 
       {/* PIN dots */}
       <View style={styles.dots}>
@@ -60,7 +62,7 @@ export function PinPad({
         ))}
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { fontSize: fontSize.sm }]}>{error}</Text> : null}
 
       {/* Keypad */}
       <View style={styles.keypad}>
@@ -69,12 +71,12 @@ export function PinPad({
             {row.map((d, di) => (
               <TouchableOpacity
                 key={di}
-                style={[styles.key, d === '' ? styles.keyHidden : null]}
+                style={[styles.key, d === '' ? styles.keyHidden : null, { width: KEY_SIZE * uiScale, height: KEY_SIZE * uiScale, borderRadius: (KEY_SIZE * uiScale) / 2 }]}
                 onPress={() => handlePress(d)}
                 disabled={d === ''}
                 activeOpacity={0.65}
               >
-                <Text style={styles.keyText}>{d}</Text>
+                <Text style={[styles.keyText, { fontSize: fontSize.xl }]}>{d}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -91,7 +93,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
     textAlign: 'center',
   },
   subtitle: {
@@ -130,6 +132,6 @@ const styles = StyleSheet.create({
   keyText: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '500',
+    fontWeight: FONT_WEIGHT.medium,
   },
 });

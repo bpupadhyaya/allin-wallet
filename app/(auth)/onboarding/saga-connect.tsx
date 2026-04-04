@@ -18,10 +18,12 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../../src/store/appStore';
 import { Button } from '../../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 export default function SagaConnect() {
   const { setPendingSagaPubkey } = useAppStore();
+  const { fontSize, contentSize } = useScaledTheme();
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState('');
@@ -88,16 +90,16 @@ export default function SagaConnect() {
       <ScrollView contentContainerStyle={styles.scroll}>
 
         {/* Header */}
-        <Text style={styles.title}>Solana Seeker / Saga</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Solana Seeker / Saga</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           Use your phone's secure hardware key as your Solana wallet.
           Your private key never leaves the Seed Vault.
         </Text>
 
         {/* Info box */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>ℹ️ How it works</Text>
-          <Text style={styles.infoText}>
+          <Text style={[styles.infoTitle, { fontSize: fontSize.sm }]}>ℹ️ How it works</Text>
+          <Text style={[styles.infoText, { fontSize: contentSize.sm }]}>
             {'• Your Seeker / Saga has a Secure Element (Seed Vault) with a non-extractable key.\n'}
             {'• AllIn connects via the Mobile Wallet Adapter — your key stays in hardware.\n'}
             {'• You will still create a username, password, and PIN for app-level security.\n'}
@@ -108,7 +110,7 @@ export default function SagaConnect() {
         {/* iOS guard */}
         {Platform.OS !== 'android' && (
           <View style={styles.iosNotice}>
-            <Text style={styles.iosNoticeText}>
+            <Text style={[styles.iosNoticeText, { fontSize: contentSize.sm }]}>
               📱 Solana Seeker / Saga is Android-only.
               Use the Seed Phrase option on iOS.
             </Text>
@@ -118,7 +120,7 @@ export default function SagaConnect() {
         {/* Error */}
         {error ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠ {error}</Text>
+            <Text style={[styles.errorText, { fontSize: contentSize.sm }]}>⚠ {error}</Text>
           </View>
         ) : null}
 
@@ -126,15 +128,15 @@ export default function SagaConnect() {
         {connecting && (
           <View style={styles.spinnerRow}>
             <ActivityIndicator color={COLORS.secondary} size="small" />
-            <Text style={styles.spinnerText}>Waiting for Seed Vault…</Text>
+            <Text style={[styles.spinnerText, { fontSize: contentSize.sm }]}>Waiting for Seed Vault…</Text>
           </View>
         )}
 
         {/* Success */}
         {connected && (
           <View style={styles.successBox}>
-            <Text style={styles.successTitle}>✅ Connected!</Text>
-            <Text style={styles.addrLabel}>Solana Address:</Text>
+            <Text style={[styles.successTitle, { fontSize: fontSize.lg }]}>✅ Connected!</Text>
+            <Text style={[styles.addrLabel, { fontSize: fontSize.xs }]}>Solana Address:</Text>
             <Text style={styles.addr} numberOfLines={1} ellipsizeMode="middle">
               {address}
             </Text>
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   subtitle: {
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     borderLeftColor: COLORS.secondary,
     gap: SPACING.sm,
   },
-  infoTitle: { color: COLORS.secondary, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  infoTitle: { color: COLORS.secondary, fontWeight: FONT_WEIGHT.heavy, fontSize: FONT_SIZE.sm },
   infoText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, lineHeight: 20 },
 
   iosNotice: {
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.success,
     gap: SPACING.xs,
   },
-  successTitle: { color: COLORS.success, fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  successTitle: { color: COLORS.success, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy },
   addrLabel: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   addr: {
     color: COLORS.text,

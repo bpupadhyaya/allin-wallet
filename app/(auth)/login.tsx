@@ -34,14 +34,15 @@ import {
   COLORS,
   SPACING,
   FONT_SIZE,
-  BORDER_RADIUS,
-} from '../../src/constants/theme';
+  BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { DEV_USERNAME, getDevAddresses } from '../../src/constants/config';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 type Mode = 'password' | 'pin';
 
 export default function LoginScreen() {
   const { setAuthenticated, setAddresses, setRecentTxs, setHasWallet } = useAppStore();
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
   const [mode, setMode] = useState<Mode>('password');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -160,8 +161,8 @@ export default function LoginScreen() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appName}>AllIn Wallet</Text>
-          <Text style={styles.tagline}>Your keys. Your coins.</Text>
+          <Text style={[styles.appName, { fontSize: fontSize.xxxl }]}>AllIn Wallet</Text>
+          <Text style={[styles.tagline, { fontSize: contentSize.sm }]}>Your keys. Your coins.</Text>
         </View>
 
         {/* Biometric quick-unlock */}
@@ -171,10 +172,10 @@ export default function LoginScreen() {
             onPress={handleBiometricLogin}
             activeOpacity={0.7}
           >
-            <Text style={styles.biometricIcon}>
+            <Text style={[styles.biometricIcon, { fontSize: scaleFont(24) }]}>
               {biometricLabel === 'Face ID' ? '🔭' : '👆'}
             </Text>
-            <Text style={styles.biometricText}>
+            <Text style={[styles.biometricText, { fontSize: fontSize.md }]}>
               Unlock with {biometricLabel}
             </Text>
           </TouchableOpacity>
@@ -192,7 +193,7 @@ export default function LoginScreen() {
                 setPinError('');
               }}
             >
-              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>
+              <Text style={[styles.toggleText, mode === m && styles.toggleTextActive, { fontSize: fontSize.sm }]}>
                 {m === 'password' ? '🔑 Password' : '🔢 PIN'}
               </Text>
             </TouchableOpacity>
@@ -234,7 +235,7 @@ export default function LoginScreen() {
 
         {/* Non-custodial notice */}
         <View style={styles.caution}>
-          <Text style={styles.cautionText}>
+          <Text style={[styles.cautionText, { fontSize: contentSize.xs }]}>
             🔒 AllIn Wallet is fully non-custodial. We never have access to
             your keys or funds. Your wallet auto-locks after{' '}
             {Math.round(15)} minutes of inactivity.{'\n'}Never share your seed
@@ -254,7 +255,7 @@ export default function LoginScreen() {
           style={styles.createLink}
           onPress={() => router.replace('/(auth)/onboarding')}
         >
-          <Text style={styles.createLinkText}>
+          <Text style={[styles.createLinkText, { fontSize: fontSize.sm }]}>
             New here?{' '}
             <Text style={styles.createLinkAccent}>Create or import a wallet →</Text>
           </Text>
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: FONT_SIZE.xxxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: -1,
   },
   tagline: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   biometricText: {
     color: COLORS.primary,
     fontSize: FONT_SIZE.md,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
   },
 
   toggleRow: {
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   toggleText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
   },
   toggleTextActive: { color: COLORS.text },
   form: { gap: SPACING.md },
@@ -335,5 +336,5 @@ const styles = StyleSheet.create({
   },
   createLink: { alignItems: 'center', paddingVertical: SPACING.sm },
   createLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
-  createLinkAccent: { color: COLORS.primary, fontWeight: '700' },
+  createLinkAccent: { color: COLORS.primary, fontWeight: FONT_WEIGHT.heavy },
 });

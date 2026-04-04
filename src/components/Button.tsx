@@ -7,7 +7,8 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { useScaledTheme } from '../hooks/useScaledTheme';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'danger' | 'dev';
 
@@ -30,10 +31,11 @@ export function Button({
   style,
   textStyle,
 }: ButtonProps) {
+  const { fontSize, uiScale } = useScaledTheme();
   const isDisabled = disabled || loading;
   return (
     <TouchableOpacity
-      style={[styles.base, styles[variant], isDisabled && styles.disabled, style]}
+      style={[styles.base, styles[variant], isDisabled && styles.disabled, { height: 52 * uiScale }, style]}
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.8}
@@ -44,7 +46,7 @@ export function Button({
           size="small"
         />
       ) : (
-        <Text style={[styles.text, styles[`${variant}Text` as const], textStyle]}>
+        <Text style={[styles.text, styles[`${variant}Text` as const], { fontSize: fontSize.md }, textStyle]}>
           {title}
         </Text>
       )}
@@ -70,7 +72,7 @@ const styles = StyleSheet.create({
   danger: { backgroundColor: COLORS.danger },
   dev: { backgroundColor: COLORS.devIndicator },
   disabled: { opacity: 0.45 },
-  text: { fontSize: FONT_SIZE.md, fontWeight: '600' },
+  text: { fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
   primaryText: { color: COLORS.text },
   secondaryText: { color: '#000' },
   outlineText: { color: COLORS.textSecondary },

@@ -8,7 +8,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { fetchEthGasPrices } from '../services/fees';
 import { fetchBtcFeeRates } from '../services/fees';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { useScaledTheme } from '../hooks/useScaledTheme';
 
 interface GasFeeData {
   ethGwei: number | null;
@@ -23,6 +24,7 @@ function feeColor(value: number, thresholds: [number, number]): string {
 }
 
 export function GasFeeBar() {
+  const { fontSize, navSize } = useScaledTheme();
   const [data, setData] = useState<GasFeeData>({
     ethGwei: null,
     btcSatVbyte: null,
@@ -72,14 +74,14 @@ export function GasFeeBar() {
       activeOpacity={0.7}
       accessibilityLabel="Network fee conditions. Tap to refresh."
     >
-      <Text style={styles.title}>Network Fees</Text>
+      <Text style={[styles.title, { fontSize: navSize.xs }]}>Network Fees</Text>
 
       <View style={styles.row}>
         {/* ETH */}
         <View style={styles.chip}>
           <View style={[styles.dot, { backgroundColor: ethColor }]} />
-          <Text style={styles.label}>ETH</Text>
-          <Text style={[styles.value, { color: ethColor }]}>
+          <Text style={[styles.label, { fontSize: fontSize.xs }]}>ETH</Text>
+          <Text style={[styles.value, { color: ethColor, fontSize: fontSize.xs }]}>
             {data.ethGwei !== null ? `${data.ethGwei} Gwei` : '—'}
           </Text>
         </View>
@@ -89,13 +91,13 @@ export function GasFeeBar() {
         {/* BTC */}
         <View style={styles.chip}>
           <View style={[styles.dot, { backgroundColor: btcColor }]} />
-          <Text style={styles.label}>BTC</Text>
-          <Text style={[styles.value, { color: btcColor }]}>
+          <Text style={[styles.label, { fontSize: fontSize.xs }]}>BTC</Text>
+          <Text style={[styles.value, { color: btcColor, fontSize: fontSize.xs }]}>
             {data.btcSatVbyte !== null ? `${data.btcSatVbyte} sat/vB` : '—'}
           </Text>
         </View>
 
-        <Text style={styles.tapHint}>{loading ? '…' : '↻'}</Text>
+        <Text style={[styles.tapHint, { fontSize: fontSize.sm }]}>{loading ? '…' : '↻'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -136,11 +138,11 @@ const styles = StyleSheet.create({
   label: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
   },
   value: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
   },
   divider: {
     width: 1,

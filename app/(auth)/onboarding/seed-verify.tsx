@@ -16,12 +16,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../../src/store/appStore';
 import { mnemonicToWords } from '../../../src/crypto/mnemonic';
 import { Button } from '../../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 const WORD_COUNT = 12;
 
 export default function SeedVerify() {
   const { pendingMnemonic } = useAppStore();
+  const { fontSize, contentSize } = useScaledTheme();
   const [inputs, setInputs] = useState<string[]>(Array(WORD_COUNT).fill(''));
   const [errors, setErrors] = useState<boolean[]>(Array(WORD_COUNT).fill(false));
   const [globalError, setGlobalError] = useState('');
@@ -60,14 +62,14 @@ export default function SeedVerify() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Verify Seed Phrase</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Verify Seed Phrase</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           Enter all 12 words in the correct order to confirm your backup.
         </Text>
 
         {globalError ? (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>⚠️ {globalError}</Text>
+            <Text style={[styles.errorBannerText, { fontSize: contentSize.sm }]}>⚠️ {globalError}</Text>
           </View>
         ) : null}
 
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   subtitle: {

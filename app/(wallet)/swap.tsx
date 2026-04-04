@@ -25,7 +25,8 @@ import type { SwapResult } from '../../src/services/swap/executor';
 import { saveTxRecord, updateTxRecord } from '../../src/services/txHistory';
 import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 // ─── Slippage options ─────────────────────────────────────────────────────────
 
@@ -38,9 +39,10 @@ function SlippageSelector({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const { fontSize } = useScaledTheme();
   return (
     <View style={slipStyles.row}>
-      <Text style={slipStyles.label}>Slippage</Text>
+      <Text style={[slipStyles.label, { fontSize: fontSize.sm }]}>Slippage</Text>
       <View style={slipStyles.pills}>
         {SLIPPAGE_PRESETS.map((pct) => (
           <TouchableOpacity
@@ -49,7 +51,7 @@ function SlippageSelector({
             onPress={() => onChange(pct)}
             activeOpacity={0.7}
           >
-            <Text style={[slipStyles.pillText, value === pct && slipStyles.pillTextActive]}>
+            <Text style={[slipStyles.pillText, value === pct && slipStyles.pillTextActive, { fontSize: fontSize.sm }]}>
               {pct}%
             </Text>
           </TouchableOpacity>
@@ -70,7 +72,7 @@ const slipStyles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: SPACING.md,
   },
-  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '500' },
+  label: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.medium },
   pills: { flexDirection: 'row', gap: SPACING.xs },
   pill: {
     paddingHorizontal: SPACING.md,
@@ -81,7 +83,7 @@ const slipStyles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  pillText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  pillText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   pillTextActive: { color: COLORS.text },
 });
 
@@ -98,11 +100,12 @@ function CoinSelectorModal({
   onClose: () => void;
   exclude?: CoinSymbol;
 }) {
+  const { fontSize, scaleFont, uiScale } = useScaledTheme();
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={modal.overlay}>
         <View style={modal.sheet}>
-          <Text style={modal.title}>Select Coin</Text>
+          <Text style={[modal.title, { fontSize: fontSize.lg }]}>Select Coin</Text>
           <ScrollView>
             {COIN_LIST.filter((c) => c.symbol !== exclude).map((coin) => (
               <TouchableOpacity
@@ -111,12 +114,12 @@ function CoinSelectorModal({
                 onPress={() => { onSelect(coin.symbol); onClose(); }}
                 activeOpacity={0.7}
               >
-                <View style={[modal.icon, { backgroundColor: coin.color + '22' }]}>
-                  <Text style={[modal.iconText, { color: coin.color }]}>{coin.icon}</Text>
+                <View style={[modal.icon, { backgroundColor: coin.color + '22', width: 40 * uiScale, height: 40 * uiScale, borderRadius: 20 * uiScale }]}>
+                  <Text style={[modal.iconText, { color: coin.color, fontSize: scaleFont(20) }]}>{coin.icon}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={modal.name}>{coin.name}</Text>
-                  <Text style={modal.chain}>{coin.chain}</Text>
+                  <Text style={[modal.name, { fontSize: fontSize.md }]}>{coin.name}</Text>
+                  <Text style={[modal.chain, { fontSize: fontSize.xs }]}>{coin.chain}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -140,7 +143,7 @@ const modal = StyleSheet.create({
     maxHeight: '75%',
     gap: SPACING.md,
   },
-  title: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: '700', textAlign: 'center' },
+  title: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy, textAlign: 'center' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -150,8 +153,8 @@ const modal = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  iconText: { fontSize: 20, fontWeight: '700' },
-  name: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '600' },
+  iconText: { fontSize: 20, fontWeight: FONT_WEIGHT.heavy },
+  name: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.bold },
   chain: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   closeBtn: {
     backgroundColor: COLORS.bgCard,
@@ -159,12 +162,13 @@ const modal = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'center',
   },
-  closeBtnText: { color: COLORS.textSecondary, fontWeight: '600' },
+  closeBtnText: { color: COLORS.textSecondary, fontWeight: FONT_WEIGHT.bold },
 });
 
 // ─── Quote card ───────────────────────────────────────────────────────────────
 
 function QuoteCard({ quote, prices }: { quote: SwapQuote; prices: Record<CoinSymbol, number> }) {
+  const { fontSize, contentSize } = useScaledTheme();
   const to = COINS[quote.toCoin];
   const toPrice = prices[quote.toCoin] ?? 0;
   const mins = Math.ceil(quote.estimatedTimeSecs / 60);
@@ -172,15 +176,15 @@ function QuoteCard({ quote, prices }: { quote: SwapQuote; prices: Record<CoinSym
 
   return (
     <View style={qs.card}>
-      <Text style={qs.title}>Quote</Text>
+      <Text style={[qs.title, { fontSize: fontSize.md }]}>Quote</Text>
 
       <View style={qs.highlight}>
-        <Text style={qs.receiveLabel}>You receive</Text>
-        <Text style={qs.receiveAmount}>
+        <Text style={[qs.receiveLabel, { fontSize: fontSize.xs }]}>You receive</Text>
+        <Text style={[qs.receiveAmount, { fontSize: fontSize.xl }]}>
           {quote.toAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} {to.symbol.replace('_', ' ')}
         </Text>
         {usdReceived > 0 && (
-          <Text style={qs.receiveUsd}>≈ {formatUsd(usdReceived)}</Text>
+          <Text style={[qs.receiveUsd, { fontSize: fontSize.sm }]}>≈ {formatUsd(usdReceived)}</Text>
         )}
       </View>
 
@@ -199,13 +203,13 @@ function QuoteCard({ quote, prices }: { quote: SwapQuote; prices: Record<CoinSym
         })),
       ].map((row, i) => (
         <View key={i} style={qs.row}>
-          <Text style={qs.rowLabel}>{row.label}</Text>
-          <Text style={[qs.rowValue, row.danger && qs.dangerText]}>{row.value}</Text>
+          <Text style={[qs.rowLabel, { fontSize: contentSize.sm }]}>{row.label}</Text>
+          <Text style={[qs.rowValue, row.danger && qs.dangerText, { fontSize: contentSize.sm }]}>{row.value}</Text>
         </View>
       ))}
 
       <View style={qs.providerRow}>
-        <Text style={qs.provider}>
+        <Text style={[qs.provider, { fontSize: contentSize.xs }]}>
           Powered by {quote.provider === 'lifi' ? 'Li.Fi' : 'THORChain'}
         </Text>
       </View>
@@ -222,7 +226,7 @@ const qs = StyleSheet.create({
     padding: SPACING.md,
     gap: SPACING.sm,
   },
-  title: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  title: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.heavy },
   highlight: {
     backgroundColor: COLORS.bgTertiary,
     borderRadius: BORDER_RADIUS.md,
@@ -230,11 +234,11 @@ const qs = StyleSheet.create({
     gap: 2,
   },
   receiveLabel: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
-  receiveAmount: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  receiveAmount: { color: COLORS.text, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy },
   receiveUsd: { color: COLORS.secondary, fontSize: FONT_SIZE.sm },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   rowLabel: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
-  rowValue: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  rowValue: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   dangerText: { color: COLORS.danger },
   providerRow: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.sm },
   provider: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, textAlign: 'right' },
@@ -251,32 +255,33 @@ function SuccessCard({
   toCoin: CoinSymbol;
   onDismiss: () => void;
 }) {
+  const { fontSize, contentSize, scaleFont } = useScaledTheme();
   const isPending = result.status === 'pending';
   const isEth = COINS[toCoin]?.chain === 'ethereum' || result.explorerUrl.includes('etherscan');
   const isDevMock = result.txHash.startsWith('dev_');
 
   return (
     <View style={success.card}>
-      <Text style={success.icon}>✅</Text>
-      <Text style={success.title}>{isDevMock ? 'Swap Simulated!' : 'Swap Submitted!'}</Text>
+      <Text style={[success.icon, { fontSize: scaleFont(48) }]}>✅</Text>
+      <Text style={[success.title, { fontSize: fontSize.xl }]}>{isDevMock ? 'Swap Simulated!' : 'Swap Submitted!'}</Text>
       {isDevMock && (
-        <Text style={success.pendingNote}>
+        <Text style={[success.pendingNote, { fontSize: contentSize.xs }]}>
           🛠 Dev mode — this is a simulated transaction. No real funds were moved.
         </Text>
       )}
       {isPending && isEth && !isDevMock && (
-        <Text style={success.pendingNote}>
+        <Text style={[success.pendingNote, { fontSize: contentSize.xs }]}>
           ⏳ ETH transaction is confirming on-chain. Status will update automatically.
         </Text>
       )}
-      <Text style={success.hash} numberOfLines={2} selectable>{result.txHash}</Text>
+      <Text style={[success.hash, { fontSize: fontSize.xs }]} numberOfLines={2} selectable>{result.txHash}</Text>
       {!isDevMock && (
         <TouchableOpacity onPress={() => Linking.openURL(result.explorerUrl)}>
-          <Text style={success.explorerLink}>View on explorer →</Text>
+          <Text style={[success.explorerLink, { fontSize: fontSize.sm }]}>View on explorer →</Text>
         </TouchableOpacity>
       )}
       <TouchableOpacity style={success.btn} onPress={onDismiss}>
-        <Text style={success.btnText}>New Swap</Text>
+        <Text style={[success.btnText, { fontSize: fontSize.md }]}>New Swap</Text>
       </TouchableOpacity>
     </View>
   );
@@ -293,7 +298,7 @@ const success = StyleSheet.create({
     gap: SPACING.md,
   },
   icon: { fontSize: 48 },
-  title: { color: COLORS.success, fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  title: { color: COLORS.success, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy },
   pendingNote: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
@@ -308,7 +313,7 @@ const success = StyleSheet.create({
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.xl,
   },
-  btnText: { color: COLORS.text, fontWeight: '700' },
+  btnText: { color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
 });
 
 // ─── Main swap screen ─────────────────────────────────────────────────────────
@@ -318,6 +323,7 @@ export default function SwapScreen() {
     balances, prices, addresses, addTxRecord, slippagePct, setSlippage,
     updateTxStatus, setBalances,
   } = useAppStore();
+  const { fontSize, contentSize, navSize, scaleFont, uiScale } = useScaledTheme();
   const [fromCoin, setFromCoin] = useState<CoinSymbol>('SOL');
   const [toCoin, setToCoin] = useState<CoinSymbol>('USDC_SOL');
   const [amount, setAmount] = useState('');
@@ -462,11 +468,11 @@ export default function SwapScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Swap</Text>
-        <Text style={styles.subtitle}>Any coin to any coin · 100% in-wallet</Text>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Swap</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>Any coin to any coin · 100% in-wallet</Text>
 
         <View style={styles.notice}>
-          <Text style={styles.noticeText}>
+          <Text style={[styles.noticeText, { fontSize: contentSize.xs }]}>
             🔐 Non-custodial. You sign locally. Routes via Li.Fi (EVM/Solana)
             and THORChain (BTC). Never leaves your device.
           </Text>
@@ -477,15 +483,15 @@ export default function SwapScreen() {
 
         {/* From */}
         <View style={styles.swapCard}>
-          <Text style={styles.swapLabel}>FROM</Text>
+          <Text style={[styles.swapLabel, { fontSize: navSize.xs }]}>FROM</Text>
           <View style={styles.swapRow}>
             <TouchableOpacity
               style={[styles.coinPill, { borderColor: fromConfig.color + '66' }]}
               onPress={() => setSelectingFrom(true)}
             >
-              <Text style={[styles.pillIcon, { color: fromConfig.color }]}>{fromConfig.icon}</Text>
-              <Text style={styles.pillText}>{fromCoin.replace('_', ' ')}</Text>
-              <Text style={styles.pillArrow}>▾</Text>
+              <Text style={[styles.pillIcon, { color: fromConfig.color, fontSize: scaleFont(18) }]}>{fromConfig.icon}</Text>
+              <Text style={[styles.pillText, { fontSize: fontSize.md }]}>{fromCoin.replace('_', ' ')}</Text>
+              <Text style={[styles.pillArrow, { fontSize: scaleFont(10) }]}>▾</Text>
             </TouchableOpacity>
             <TextInput
               style={styles.amountInput}
@@ -497,37 +503,37 @@ export default function SwapScreen() {
             />
           </View>
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceHint}>
+            <Text style={[styles.balanceHint, { fontSize: fontSize.xs }]}>
               Balance: {fromBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} {fromCoin.replace('_', ' ')}
             </Text>
             {amountUsd > 0 && (
-              <Text style={styles.usdHint}>≈ {formatUsd(amountUsd)}</Text>
+              <Text style={[styles.usdHint, { fontSize: fontSize.xs }]}>≈ {formatUsd(amountUsd)}</Text>
             )}
           </View>
         </View>
 
         {/* Flip */}
-        <TouchableOpacity style={styles.flipBtn} onPress={swapCoins} activeOpacity={0.7}>
-          <Text style={styles.flipText}>⇅</Text>
+        <TouchableOpacity style={[styles.flipBtn, { width: 44 * uiScale, height: 44 * uiScale, borderRadius: 22 * uiScale }]} onPress={swapCoins} activeOpacity={0.7}>
+          <Text style={[styles.flipText, { fontSize: scaleFont(22) }]}>⇅</Text>
         </TouchableOpacity>
 
         {/* To */}
         <View style={styles.swapCard}>
-          <Text style={styles.swapLabel}>TO</Text>
+          <Text style={[styles.swapLabel, { fontSize: navSize.xs }]}>TO</Text>
           <View style={styles.swapRow}>
             <TouchableOpacity
               style={[styles.coinPill, { borderColor: toConfig.color + '66' }]}
               onPress={() => setSelectingTo(true)}
             >
-              <Text style={[styles.pillIcon, { color: toConfig.color }]}>{toConfig.icon}</Text>
-              <Text style={styles.pillText}>{toCoin.replace('_', ' ')}</Text>
-              <Text style={styles.pillArrow}>▾</Text>
+              <Text style={[styles.pillIcon, { color: toConfig.color, fontSize: scaleFont(18) }]}>{toConfig.icon}</Text>
+              <Text style={[styles.pillText, { fontSize: fontSize.md }]}>{toCoin.replace('_', ' ')}</Text>
+              <Text style={[styles.pillArrow, { fontSize: scaleFont(10) }]}>▾</Text>
             </TouchableOpacity>
             <View style={styles.toAmountBox}>
               {quoting ? (
                 <ActivityIndicator color={COLORS.primary} size="small" />
               ) : (
-                <Text style={styles.toAmount}>
+                <Text style={[styles.toAmount, { fontSize: fontSize.xl }]}>
                   {quote
                     ? `~${quote.toAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
                     : '—'}
@@ -550,7 +556,7 @@ export default function SwapScreen() {
         {/* Price impact warning */}
         {quote && quote.priceImpact > 2 && !result ? (
           <View style={styles.impactWarning}>
-            <Text style={styles.impactWarningText}>
+            <Text style={[styles.impactWarningText, { fontSize: contentSize.sm }]}>
               ⚠️ High price impact ({quote.priceImpact.toFixed(2)}%). Consider
               splitting into smaller trades to reduce slippage.
             </Text>
@@ -561,7 +567,7 @@ export default function SwapScreen() {
         {!result ? (
           !quote ? (
             <TouchableOpacity
-              style={[styles.actionBtn, quoting && styles.btnDisabled]}
+              style={[styles.actionBtn, quoting && styles.btnDisabled, { height: 56 * uiScale }]}
               onPress={handleGetQuote}
               disabled={quoting}
               activeOpacity={0.8}
@@ -569,12 +575,12 @@ export default function SwapScreen() {
               {quoting ? (
                 <ActivityIndicator color={COLORS.text} />
               ) : (
-                <Text style={styles.actionBtnText}>Get Best Quote</Text>
+                <Text style={[styles.actionBtnText, { fontSize: fontSize.lg }]}>Get Best Quote</Text>
               )}
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnConfirm, swapping && styles.btnDisabled]}
+              style={[styles.actionBtn, styles.actionBtnConfirm, swapping && styles.btnDisabled, { height: 56 * uiScale }]}
               onPress={handleConfirmSwap}
               disabled={swapping}
               activeOpacity={0.8}
@@ -582,7 +588,7 @@ export default function SwapScreen() {
               {swapping ? (
                 <ActivityIndicator color={COLORS.text} />
               ) : (
-                <Text style={styles.actionBtnText}>
+                <Text style={[styles.actionBtnText, { fontSize: fontSize.lg }]}>
                   Confirm Swap →
                 </Text>
               )}
@@ -592,13 +598,13 @@ export default function SwapScreen() {
 
         {quote && !result ? (
           <TouchableOpacity onPress={() => setQuote(null)}>
-            <Text style={styles.resetText}>← Refresh quote</Text>
+            <Text style={[styles.resetText, { fontSize: fontSize.sm }]}>← Refresh quote</Text>
           </TouchableOpacity>
         ) : null}
 
         {/* Caution */}
         <View style={styles.caution}>
-          <Text style={styles.cautionText}>
+          <Text style={[styles.cautionText, { fontSize: contentSize.xs }]}>
             ⚠️ Crypto swaps are irreversible. Verify amounts and routes before
             confirming. AllIn Wallet cannot recover swapped funds.
           </Text>
@@ -624,7 +630,7 @@ export default function SwapScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.md, paddingBottom: SPACING.xxl },
-  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: '800' },
+  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
   subtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
   notice: {
     backgroundColor: COLORS.bgCard,
@@ -645,7 +651,7 @@ const styles = StyleSheet.create({
   swapLabel: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
   },
   swapRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
@@ -660,19 +666,19 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     flexShrink: 0,
   },
-  pillIcon: { fontSize: 18, fontWeight: '700' },
-  pillText: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  pillIcon: { fontSize: 18, fontWeight: FONT_WEIGHT.heavy },
+  pillText: { color: COLORS.text, fontSize: FONT_SIZE.md, fontWeight: FONT_WEIGHT.heavy },
   pillArrow: { color: COLORS.textMuted, fontSize: 10 },
   amountInput: {
     flex: 1,
     color: COLORS.text,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'right',
     height: 44,
   },
   toAmountBox: { flex: 1, alignItems: 'flex-end' },
-  toAmount: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xl, fontWeight: '700' },
+  toAmount: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.heavy },
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between' },
   balanceHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
   usdHint: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
@@ -687,7 +693,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
   },
-  flipText: { color: COLORS.primary, fontSize: 22, fontWeight: '700' },
+  flipText: { color: COLORS.primary, fontSize: 22, fontWeight: FONT_WEIGHT.heavy },
   impactWarning: {
     backgroundColor: '#1A0A0A',
     borderRadius: BORDER_RADIUS.md,
@@ -705,7 +711,7 @@ const styles = StyleSheet.create({
   },
   actionBtnConfirm: { backgroundColor: COLORS.secondary },
   btnDisabled: { opacity: 0.5 },
-  actionBtnText: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: '800' },
+  actionBtnText: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: FONT_WEIGHT.heavy },
   resetText: { color: COLORS.primary, fontSize: FONT_SIZE.sm, textAlign: 'center', textDecorationLine: 'underline' },
   caution: {
     backgroundColor: COLORS.bgCard,

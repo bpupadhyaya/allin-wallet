@@ -19,19 +19,92 @@ import {
   isBiometricEnabled,
 } from '../../src/services/biometric';
 import { clearTxHistory } from '../../src/services/txHistory';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT, SCALE_PRESETS, DEFAULT_DISPLAY_SCALES, type ScalePresetKey } from '../../src/constants/theme';
+import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/constants/config';
 import { saveTestnetEnabled } from '../../src/services/storage';
 import { deriveWalletsFromMnemonic } from '../../src/crypto/wallets';
-import { getMnemonic, saveWalletAddresses } from '../../src/services/storage';
+import { getMnemonic, saveWalletAddresses, saveDisplayScales } from '../../src/services/storage';
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0, 2.0];
+const PRESET_LABELS: { key: ScalePresetKey; label: string }[] = [
+  { key: 'small', label: 'S' },
+  { key: 'default', label: 'D' },
+  { key: 'large', label: 'L' },
+  { key: 'extraLarge', label: 'XL' },
+];
+
+function ScalePresetRow({
+  label,
+  value,
+  onChange,
+  previewSize,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  previewSize: number;
+}) {
+  return (
+    <View style={styles.scaleRow}>
+      <Text style={styles.scaleLabel}>{label}</Text>
+      <View style={styles.scaleButtons}>
+        {PRESET_LABELS.map(({ key, label: btnLabel }) => {
+          const presetVal = SCALE_PRESETS[key];
+          const active = Math.abs(value - presetVal) < 0.01;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[styles.scaleBtn, active && styles.scaleBtnActive]}
+              onPress={() => onChange(presetVal)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.scaleBtnText, active && styles.scaleBtnTextActive]}>
+                {btnLabel}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={[styles.scalePreview, { fontSize: previewSize }]}>Aa</Text>
+    </View>
+  );
+}
 
 function SectionLabel({ label, danger }: { label: string; danger?: boolean }) {
   return (
     <Text style={[styles.sectionLabel, danger && { color: COLORS.danger }]}>
       {label}
     </Text>
+  );
+}
+
+function CollapsibleCard({
+  label,
+  danger,
+  children,
+  defaultOpen = false,
+}: {
+  label: string;
+  danger?: boolean;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <View style={styles.section}>
+      <TouchableOpacity
+        style={styles.collapsibleHeader}
+        onPress={() => setOpen(!open)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.sectionLabel, danger && { color: COLORS.danger }]}>
+          {label}
+        </Text>
+        <Text style={styles.chevron}>{open ? '▾' : '▸'}</Text>
+      </TouchableOpacity>
+      {open && <View style={styles.card}>{children}</View>}
+    </View>
   );
 }
 
@@ -82,7 +155,18 @@ export default function Settings() {
     setRecentTxs,
     setAddresses,
     setBalances,
+    appFontScale,
+    contentFontScale,
+    navFontScale,
+    uiElementScale,
+    setAppFontScale,
+    setContentFontScale,
+    setNavFontScale,
+    setUiElementScale,
+    setDisplayScales,
   } = useAppStore();
+
+  const { fontSize: scaledFs, contentSize, navSize } = useScaledTheme();
 
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioLabel, setBioLabel] = useState('Biometrics');
@@ -224,133 +308,159 @@ export default function Settings() {
         <Text style={styles.title}>Settings</Text>
 
         {/* Account */}
-        <View style={styles.section}>
-          <SectionLabel label="Account" />
-          <View style={styles.card}>
-            <SettingRow icon="👤" label="Username" sub={username ?? '—'} />
-            <SettingRow icon="🔑" label="Wallet Type" sub={walletType ?? '—'} />
-            <SettingRow
-              icon="🚪"
-              label="Sign Out"
-              sub="Remove this account from the app"
-              onPress={handleSignOut}
-              danger
-            />
-          </View>
-        </View>
+        <CollapsibleCard label="Account">
+          <SettingRow icon="👤" label="Username" sub={username ?? '—'} />
+          <SettingRow icon="🔑" label="Wallet Type" sub={walletType ?? '—'} />
+          <SettingRow
+            icon="🚪"
+            label="Sign Out"
+            sub="Remove this account from the app"
+            onPress={handleSignOut}
+            danger
+          />
+        </CollapsibleCard>
+
+        {/* Display */}
+        <CollapsibleCard label="Display">
+          <ScalePresetRow
+            label="App Font Size"
+            value={appFontScale}
+            onChange={setAppFontScale}
+            previewSize={scaledFs.md}
+          />
+          <ScalePresetRow
+            label="Content Text"
+            value={contentFontScale}
+            onChange={setContentFontScale}
+            previewSize={contentSize.md}
+          />
+          <ScalePresetRow
+            label="Menu / Nav"
+            value={navFontScale}
+            onChange={setNavFontScale}
+            previewSize={navSize.md}
+          />
+          <ScalePresetRow
+            label="UI Elements"
+            value={uiElementScale}
+            onChange={setUiElementScale}
+            previewSize={scaledFs.lg}
+          />
+          <TouchableOpacity
+            style={styles.resetBtn}
+            onPress={() => {
+              setDisplayScales(DEFAULT_DISPLAY_SCALES);
+              saveDisplayScales(DEFAULT_DISPLAY_SCALES).catch(() => {});
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.resetBtnText}>Reset to Defaults</Text>
+          </TouchableOpacity>
+        </CollapsibleCard>
 
         {/* Security */}
-        <View style={styles.section}>
-          <SectionLabel label="Security" />
-          <View style={styles.card}>
-            {bioAvailable && (
-              <SettingRow
-                icon={bioLabel === 'Face ID' ? '🔭' : '👆'}
-                label={`Unlock with ${bioLabel}`}
-                sub="Use biometrics instead of password on login"
-                rightElement={
-                  <Switch
-                    value={biometricEnabled}
-                    onValueChange={handleBioToggle}
-                    trackColor={{ false: COLORS.border, true: COLORS.primary }}
-                    thumbColor={COLORS.text}
-                  />
-                }
-              />
-            )}
+        <CollapsibleCard label="Security">
+          {bioAvailable && (
             <SettingRow
-              icon="⏱"
-              label="Auto-lock"
-              sub={`Wallet locks after ${timeoutMinutes} minutes in background`}
+              icon={bioLabel === 'Face ID' ? '🔭' : '👆'}
+              label={`Unlock with ${bioLabel}`}
+              sub="Use biometrics instead of password on login"
+              rightElement={
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleBioToggle}
+                  trackColor={{ false: COLORS.border, true: COLORS.primary }}
+                  thumbColor={COLORS.text}
+                />
+              }
             />
-            <SettingRow
-              icon="🔑"
-              label="Change Password"
-              onPress={() => Alert.alert('Coming Soon', 'Password change in next release.')}
-            />
-            <SettingRow
-              icon="🔢"
-              label="Change PIN"
-              onPress={() => Alert.alert('Coming Soon', 'PIN change in next release.')}
-            />
-            <SettingRow
-              icon="🔒"
-              label="Lock Wallet Now"
-              onPress={handleLock}
-            />
-          </View>
-        </View>
+          )}
+          <SettingRow
+            icon="⏱"
+            label="Auto-lock"
+            sub={`Wallet locks after ${timeoutMinutes} minutes in background`}
+          />
+          <SettingRow
+            icon="🔑"
+            label="Change Password"
+            onPress={() => Alert.alert('Coming Soon', 'Password change in next release.')}
+          />
+          <SettingRow
+            icon="🔢"
+            label="Change PIN"
+            onPress={() => Alert.alert('Coming Soon', 'PIN change in next release.')}
+          />
+          <SettingRow
+            icon="🔒"
+            label="Lock Wallet Now"
+            onPress={handleLock}
+          />
+        </CollapsibleCard>
 
         {/* Swap preferences */}
-        <View style={styles.section}>
-          <SectionLabel label="Swap" />
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <Text style={styles.rowIcon}>⚙️</Text>
-              <Text style={styles.rowLabel} style={{ flex: 1 }}>Slippage Tolerance</Text>
-            </View>
-            <View style={styles.slippageRow}>
-              {SLIPPAGE_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[
-                    styles.slippageBtn,
-                    slippagePct === opt && styles.slippageBtnActive,
-                  ]}
-                  onPress={() => setSlippage(opt)}
-                >
-                  <Text
-                    style={[
-                      styles.slippageBtnText,
-                      slippagePct === opt && styles.slippageBtnTextActive,
-                    ]}
-                  >
-                    {opt}%
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.slippageNote}>
-              {slippagePct < 0.5
-                ? '⚠️ Low slippage may cause failed transactions in volatile markets.'
-                : slippagePct > 1
-                  ? '⚠️ High slippage increases exposure to price impact and front-running.'
-                  : '✅ Recommended for most trades.'}
-            </Text>
+        <CollapsibleCard label="Swap">
+          <View style={styles.row}>
+            <Text style={styles.rowIcon}>⚙️</Text>
+            <Text style={[styles.rowLabel, { flex: 1 }]}>Slippage Tolerance</Text>
           </View>
-        </View>
+          <View style={styles.slippageRow}>
+            {SLIPPAGE_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.slippageBtn,
+                  slippagePct === opt && styles.slippageBtnActive,
+                ]}
+                onPress={() => setSlippage(opt)}
+              >
+                <Text
+                  style={[
+                    styles.slippageBtnText,
+                    slippagePct === opt && styles.slippageBtnTextActive,
+                  ]}
+                >
+                  {opt}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.slippageNote}>
+            {slippagePct < 0.5
+              ? '⚠️ Low slippage may cause failed transactions in volatile markets.'
+              : slippagePct > 1
+                ? '⚠️ High slippage increases exposure to price impact and front-running.'
+                : '✅ Recommended for most trades.'}
+          </Text>
+        </CollapsibleCard>
 
         {/* Network */}
-        <View style={styles.section}>
-          <SectionLabel label="Network" />
+        <CollapsibleCard label="Network">
           {useTestnet && (
-            <View style={styles.testnetBanner}>
+            <View style={styles.testnetBannerInCard}>
               <Text style={styles.testnetBannerText}>
                 🧪 TESTNET MODE — No real funds. BTC Testnet4 · Sepolia · Solana Devnet
               </Text>
             </View>
           )}
-          <View style={styles.card}>
-            <SettingRow
-              icon="🧪"
-              label="Use Testnet"
-              sub={useTestnet ? 'Testnet active — switch back for real transactions' : 'Switch to test networks for development'}
-              rightElement={
-                <Switch
-                  value={useTestnet}
-                  onValueChange={handleTestnetToggle}
-                  trackColor={{ false: COLORS.border, true: COLORS.warning }}
-                  thumbColor={COLORS.text}
-                />
-              }
-            />
-            <SettingRow
-              icon="⚙️"
-              label="Custom RPC Endpoints"
-              onPress={() => Alert.alert('Coming Soon', 'Custom RPC in next release.')}
-            />
-          </View>
-        </View>
+          <SettingRow
+            icon="🧪"
+            label="Use Testnet"
+            sub={useTestnet ? 'Testnet active — switch back for real transactions' : 'Switch to test networks for development'}
+            rightElement={
+              <Switch
+                value={useTestnet}
+                onValueChange={handleTestnetToggle}
+                trackColor={{ false: COLORS.border, true: COLORS.warning }}
+                thumbColor={COLORS.text}
+              />
+            }
+          />
+          <SettingRow
+            icon="⚙️"
+            label="Custom RPC Endpoints"
+            onPress={() => Alert.alert('Coming Soon', 'Custom RPC in next release.')}
+          />
+        </CollapsibleCard>
 
         {/* History */}
         <View style={styles.section}>
@@ -399,12 +509,12 @@ export default function Settings() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxl },
-  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: '800' },
+  title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
   section: { gap: SPACING.sm },
   sectionLabel: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -445,7 +555,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   slippageBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  slippageBtnText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  slippageBtnText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   slippageBtnTextActive: { color: COLORS.text },
   slippageNote: {
     color: COLORS.textMuted,
@@ -453,6 +563,63 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
     lineHeight: 18,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.xs,
+  },
+  chevron: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZE.md,
+  },
+  testnetBannerInCard: {
+    backgroundColor: '#1A1400',
+    padding: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  scaleRow: {
+    padding: SPACING.md,
+    gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  scaleLabel: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  scaleButtons: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  scaleBtn: {
+    flex: 1,
+    backgroundColor: COLORS.bgTertiary,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+  },
+  scaleBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  scaleBtnText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+  scaleBtnTextActive: { color: COLORS.text },
+  scalePreview: {
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.medium,
+    textAlign: 'center',
+  },
+  resetBtn: {
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  resetBtnText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
   },
   testnetBanner: {
     backgroundColor: '#1A1400',
@@ -464,7 +631,7 @@ const styles = StyleSheet.create({
   testnetBannerText: {
     color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   devBanner: {
@@ -475,7 +642,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     gap: SPACING.xs,
   },
-  devText: { color: COLORS.devIndicator, fontWeight: '700', fontSize: FONT_SIZE.sm },
+  devText: { color: COLORS.devIndicator, fontWeight: FONT_WEIGHT.heavy, fontSize: FONT_SIZE.sm },
   devSub: { color: COLORS.textSecondary, fontSize: FONT_SIZE.xs, lineHeight: 18 },
   version: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs, textAlign: 'center' },
 });

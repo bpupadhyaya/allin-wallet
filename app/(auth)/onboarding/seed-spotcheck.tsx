@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../../src/store/appStore';
 import { mnemonicToWords } from '../../../src/crypto/mnemonic';
 import { Button } from '../../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 const SPOT_COUNT = 3;
 
@@ -32,6 +33,7 @@ function pickRandomPositions(total: number, count: number): number[] {
 export default function SeedSpotCheck() {
   const { pendingMnemonic } = useAppStore();
   const correctWords = pendingMnemonic ? mnemonicToWords(pendingMnemonic) : [];
+  const { fontSize, contentSize } = useScaledTheme();
 
   const [positions, setPositions] = useState<number[]>([]);
   const [inputs, setInputs] = useState<string[]>([]);
@@ -74,14 +76,14 @@ export default function SeedSpotCheck() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Spot Check</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Spot Check</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           Almost there! Enter the words at the positions below to confirm your
           backup is accurate.
         </Text>
 
         <View style={styles.notice}>
-          <Text style={styles.noticeText}>
+          <Text style={[styles.noticeText, { fontSize: contentSize.sm }]}>
             ✅ Full phrase verification passed.{'\n'}
             Now confirm {SPOT_COUNT} randomly selected words.
           </Text>
@@ -89,14 +91,14 @@ export default function SeedSpotCheck() {
 
         {globalError ? (
           <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>⚠️ {globalError}</Text>
+            <Text style={[styles.errorBannerText, { fontSize: contentSize.sm }]}>⚠️ {globalError}</Text>
           </View>
         ) : null}
 
         <View style={styles.challenges}>
           {positions.map((pos, i) => (
             <View key={i} style={styles.challengeRow}>
-              <Text style={styles.posLabel}>Word #{pos + 1}</Text>
+              <Text style={[styles.posLabel, { fontSize: fontSize.sm }]}>Word #{pos + 1}</Text>
               <TextInput
                 style={[styles.challengeInput, errors[i] && styles.challengeInputError]}
                 placeholder={`Enter word ${pos + 1}`}
@@ -108,7 +110,7 @@ export default function SeedSpotCheck() {
                 spellCheck={false}
               />
               {errors[i] ? (
-                <Text style={styles.fieldError}>Incorrect word</Text>
+                <Text style={[styles.fieldError, { fontSize: fontSize.xs }]}>Incorrect word</Text>
               ) : null}
             </View>
           ))}
@@ -126,7 +128,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONT_SIZE.xxl,
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: FONT_WEIGHT.heavy,
     textAlign: 'center',
   },
   subtitle: {
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
   posLabel: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
   },
   challengeInput: {
     backgroundColor: COLORS.bgCard,

@@ -20,7 +20,8 @@ import { router } from 'expo-router';
 import { sanitizeMnemonic } from '../../../src/crypto/mnemonic';
 import { useAppStore } from '../../../src/store/appStore';
 import { Button } from '../../../src/components/Button';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
 const WORD_COUNT = 12;
 
@@ -28,6 +29,7 @@ export default function ImportScreen() {
   const [words, setWords] = useState<string[]>(Array(WORD_COUNT).fill(''));
   const [errors, setErrors] = useState<boolean[]>(Array(WORD_COUNT).fill(false));
   const [showWarning, setShowWarning] = useState(true);
+  const { fontSize, contentSize } = useScaledTheme();
   const inputRefs = useRef<Array<TextInput | null>>(Array(WORD_COUNT).fill(null));
 
   const setPendingMnemonic = useAppStore((s) => s.setPendingMnemonic);
@@ -84,22 +86,22 @@ export default function ImportScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Import Wallet</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { fontSize: fontSize.xl }]}>Import Wallet</Text>
+        <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
           Enter your 12-word recovery phrase in the correct order.
         </Text>
 
         {/* Security warning */}
         {showWarning && (
           <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>⚠ Security Notice</Text>
-            <Text style={styles.warningText}>
+            <Text style={[styles.warningTitle, { fontSize: fontSize.sm }]}>⚠ Security Notice</Text>
+            <Text style={[styles.warningText, { fontSize: contentSize.xs }]}>
               Never enter your seed phrase on an untrusted device or over a network
               connection. Your seed phrase grants full access to your funds. This
               app never transmits your phrase — it stays on-device only.
             </Text>
             <TouchableOpacity onPress={() => setShowWarning(false)}>
-              <Text style={styles.warningDismiss}>I understand — dismiss</Text>
+              <Text style={[styles.warningDismiss, { fontSize: fontSize.xs }]}>I understand — dismiss</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -154,7 +156,7 @@ const styles = StyleSheet.create({
   title: {
     color: COLORS.text,
     fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
   },
   subtitle: {
     color: COLORS.textSecondary,
@@ -172,7 +174,7 @@ const styles = StyleSheet.create({
   warningTitle: {
     color: '#F5A623',
     fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
   },
   warningText: {
     color: COLORS.textSecondary,
@@ -182,7 +184,7 @@ const styles = StyleSheet.create({
   warningDismiss: {
     color: '#F5A623',
     fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
+    fontWeight: FONT_WEIGHT.bold,
     textDecorationLine: 'underline',
   },
   grid: { gap: SPACING.sm },
@@ -207,7 +209,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     color: COLORS.text,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '500',
+    fontWeight: FONT_WEIGHT.medium,
   },
   wordInputError: {
     borderColor: '#FF4D4D',

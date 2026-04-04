@@ -9,7 +9,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useAppStore } from '../store/appStore';
 import { toUsd, formatUsd } from '../services/prices';
 import { COIN_LIST } from '../constants/coins';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { useScaledTheme } from '../hooks/useScaledTheme';
 
 interface Segment {
   symbol: string;
@@ -22,6 +23,7 @@ interface Segment {
 
 export function AllocationChart() {
   const { balances, prices } = useAppStore();
+  const { fontSize, navSize } = useScaledTheme();
 
   const { segments, total } = useMemo(() => {
     const all = COIN_LIST.map((coin) => ({
@@ -45,7 +47,7 @@ export function AllocationChart() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Allocation</Text>
+      <Text style={[styles.label, { fontSize: navSize.xs }]}>Allocation</Text>
 
       {/* Stacked bar */}
       <View style={styles.bar}>
@@ -69,12 +71,12 @@ export function AllocationChart() {
           <View key={seg.symbol} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: seg.color }]} />
             <View style={styles.legendInfo}>
-              <Text style={styles.legendSymbol}>
+              <Text style={[styles.legendSymbol, { fontSize: fontSize.sm }]}>
                 {seg.icon} {seg.symbol.replace('_', ' ')}
               </Text>
-              <Text style={styles.legendPct}>{seg.pct.toFixed(1)}%</Text>
+              <Text style={[styles.legendPct, { fontSize: fontSize.xs }]}>{seg.pct.toFixed(1)}%</Text>
             </View>
-            <Text style={styles.legendUsd}>{formatUsd(seg.usd)}</Text>
+            <Text style={[styles.legendUsd, { fontSize: fontSize.sm }]}>{formatUsd(seg.usd)}</Text>
           </View>
         ))}
       </View>
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
   label: {
     color: COLORS.textMuted,
     fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
+    fontWeight: FONT_WEIGHT.heavy,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -119,7 +121,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   legendInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  legendSymbol: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  legendSymbol: { color: COLORS.text, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
   legendPct: { color: COLORS.textMuted, fontSize: FONT_SIZE.xs },
-  legendUsd: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  legendUsd: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
 });
