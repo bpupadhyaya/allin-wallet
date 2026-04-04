@@ -19,7 +19,7 @@ import {
   isBiometricEnabled,
 } from '../../src/services/biometric';
 import { clearTxHistory } from '../../src/services/txHistory';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT, SCALE_PRESETS, DEFAULT_DISPLAY_SCALES, type ScalePresetKey } from '../../src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT, DEFAULT_DISPLAY_SCALES } from '../../src/constants/theme';
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/constants/config';
 import { saveTestnetEnabled } from '../../src/services/storage';
@@ -27,14 +27,11 @@ import { deriveWalletsFromMnemonic } from '../../src/crypto/wallets';
 import { getMnemonic, saveWalletAddresses, saveDisplayScales } from '../../src/services/storage';
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0, 2.0];
-const PRESET_LABELS: { key: ScalePresetKey; label: string }[] = [
-  { key: 'small', label: 'S' },
-  { key: 'default', label: 'D' },
-  { key: 'large', label: 'L' },
-  { key: 'extraLarge', label: 'XL' },
-];
 
-function ScalePresetRow({
+const SCALE_MIN = 0.5;
+const SCALE_MAX = 2.5;
+
+function ScaleSliderRow({
   label,
   value,
   onChange,
@@ -45,28 +42,45 @@ function ScalePresetRow({
   onChange: (v: number) => void;
   previewSize: number;
 }) {
+  const trackRef = React.useRef<View>(null);
+  const pct = (value - SCALE_MIN) / (SCALE_MAX - SCALE_MIN);
+  const displayPct = Math.round(value * 100);
+
+  function handleTouch(pageX: number) {
+    trackRef.current?.measure((_x, _y, width, _h, px) => {
+      const ratio = Math.max(0, Math.min(1, (pageX - px) / width));
+      const raw = SCALE_MIN + ratio * (SCALE_MAX - SCALE_MIN);
+      // Round to nearest 0.05
+      const rounded = Math.round(raw * 20) / 20;
+      onChange(Math.max(SCALE_MIN, Math.min(SCALE_MAX, rounded)));
+    });
+  }
+
   return (
     <View style={styles.scaleRow}>
-      <Text style={styles.scaleLabel}>{label}</Text>
-      <View style={styles.scaleButtons}>
-        {PRESET_LABELS.map(({ key, label: btnLabel }) => {
-          const presetVal = SCALE_PRESETS[key];
-          const active = Math.abs(value - presetVal) < 0.01;
-          return (
-            <TouchableOpacity
-              key={key}
-              style={[styles.scaleBtn, active && styles.scaleBtnActive]}
-              onPress={() => onChange(presetVal)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.scaleBtnText, active && styles.scaleBtnTextActive]}>
-                {btnLabel}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.scaleHeader}>
+        <Text style={styles.scaleLabel}>{label}</Text>
+        <View style={styles.scaleRight}>
+          <Text style={[styles.scalePreview, { fontSize: previewSize }]}>Aa</Text>
+          <Text style={styles.scalePct}>{displayPct}%</Text>
+        </View>
       </View>
-      <Text style={[styles.scalePreview, { fontSize: previewSize }]}>Aa</Text>
+      <View
+        ref={trackRef}
+        style={styles.sliderTrack}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(e) => handleTouch(e.nativeEvent.pageX)}
+        onResponderMove={(e) => handleTouch(e.nativeEvent.pageX)}
+      >
+        <View style={[styles.sliderFill, { width: `${pct * 100}%` }]} />
+        <View style={[styles.sliderThumb, { left: `${pct * 100}%` }]} />
+      </View>
+      <View style={styles.sliderLabels}>
+        <Text style={styles.sliderLabelText}>50%</Text>
+        <Text style={styles.sliderLabelText}>100%</Text>
+        <Text style={styles.sliderLabelText}>250%</Text>
+      </View>
     </View>
   );
 }
@@ -322,25 +336,25 @@ export default function Settings() {
 
         {/* Display */}
         <CollapsibleCard label="Display">
-          <ScalePresetRow
+          <ScaleSliderRow
             label="App Font Size"
             value={appFontScale}
             onChange={setAppFontScale}
             previewSize={scaledFs.md}
           />
-          <ScalePresetRow
+          <ScaleSliderRow
             label="Content Text"
             value={contentFontScale}
             onChange={setContentFontScale}
             previewSize={contentSize.md}
           />
-          <ScalePresetRow
+          <ScaleSliderRow
             label="Menu / Nav"
             value={navFontScale}
             onChange={setNavFontScale}
             previewSize={navSize.md}
           />
-          <ScalePresetRow
+          <ScaleSliderRow
             label="UI Elements"
             value={uiElementScale}
             onChange={setUiElementScale}
@@ -586,31 +600,65 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  scaleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   scaleLabel: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.medium,
   },
-  scaleButtons: {
+  scaleRight: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.sm,
   },
-  scaleBtn: {
-    flex: 1,
-    backgroundColor: COLORS.bgTertiary,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
-  },
-  scaleBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  scaleBtnText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
-  scaleBtnTextActive: { color: COLORS.text },
   scalePreview: {
     color: COLORS.text,
     fontWeight: FONT_WEIGHT.medium,
-    textAlign: 'center',
+  },
+  scalePct: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
+    minWidth: 40,
+    textAlign: 'right',
+  },
+  sliderTrack: {
+    height: 32,
+    justifyContent: 'center',
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.bgTertiary,
+    overflow: 'visible',
+  },
+  sliderFill: {
+    position: 'absolute',
+    left: 0,
+    top: 12,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+  },
+  sliderThumb: {
+    position: 'absolute',
+    top: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.text,
+    marginLeft: -12,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  sliderLabelText: {
+    color: COLORS.textMuted,
+    fontSize: FONT_SIZE.xs,
   },
   resetBtn: {
     padding: SPACING.md,
