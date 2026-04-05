@@ -15,6 +15,7 @@
     "@scure/bip39": "^1.4.0",
     "@scure/btc-signer": "^1.4.1",
     "@solana-mobile/mobile-wallet-adapter-protocol-web3js": "^2.0.0",
+    "@solana-mobile/seed-vault-lib": "^0.4.1",
     "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.95.4",
     "@types/bcryptjs": "^2.4.6",

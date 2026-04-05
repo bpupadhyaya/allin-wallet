@@ -12,8 +12,7 @@ config.resolver.extraNodeModules = {
 
 // @solana-mobile/mobile-wallet-adapter-protocol ships an index.native.js that
 // calls TurboModuleRegistry.getEnforcing('SolanaMobileWalletAdapter') at
-// module init time. Since we don't bundle the native MWA module, redirect to
-// the browser stub which has no native dependency.
+// module init time. Redirect to browser stub on all platforms.
 const MWA_BROWSER_STUB = path.resolve(
   __dirname,
   'node_modules/@solana-mobile/mobile-wallet-adapter-protocol/lib/cjs/index.browser.js'
