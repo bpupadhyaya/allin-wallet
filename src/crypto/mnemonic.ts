@@ -5,7 +5,7 @@ import { wordlist } from '@scure/bip39/wordlists/english';
  * Generate a BIP-39 mnemonic phrase.
  * @param strength 128 bits → 12 words; 256 bits → 24 words.
  */
-export function generateMnemonic(strength: 128 | 256 = 128): string {
+export function generateMnemonic(strength: 128 | 256 = 256): string {
   return bip39.generateMnemonic(wordlist, strength);
 }
 

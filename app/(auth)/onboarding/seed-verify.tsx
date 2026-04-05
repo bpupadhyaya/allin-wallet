@@ -19,7 +19,7 @@ import { Button } from '../../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
-const WORD_COUNT = 12;
+const WORD_COUNT = 24;
 
 export default function SeedVerify() {
   const { pendingMnemonic } = useAppStore();
@@ -64,7 +64,7 @@ export default function SeedVerify() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Verify Seed Phrase</Text>
         <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
-          Enter all 12 words in the correct order to confirm your backup.
+          Enter all 24 words in the correct order to confirm your backup.
         </Text>
 
         {globalError ? (

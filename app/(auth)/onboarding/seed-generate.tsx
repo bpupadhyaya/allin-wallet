@@ -22,7 +22,7 @@ export default function SeedGenerate() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const mnemonic = generateMnemonic(128); // 12 words
+    const mnemonic = generateMnemonic(256); // 24 words (max security)
     setPendingMnemonic(mnemonic);
     setWords(mnemonicToWords(mnemonic));
     setLoading(false);
@@ -45,7 +45,7 @@ export default function SeedGenerate() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Your Seed Phrase</Text>
         <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
-          These 12 words are the master key to your wallet. Write them down in
+          These 24 words are the master key to your wallet. Write them down in
           order and store them somewhere safe and offline.
         </Text>
 
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   wordCard: {
-    width: '30%',
+    width: '23%',
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.sm,
     borderWidth: 1,

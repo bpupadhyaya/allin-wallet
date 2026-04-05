@@ -18,7 +18,7 @@ import { Button } from '../../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
-const SPOT_COUNT = 3;
+const SPOT_COUNT = 5;
 
 function pickRandomPositions(total: number, count: number): number[] {
   const positions = Array.from({ length: total }, (_, i) => i);
@@ -85,7 +85,7 @@ export default function SeedSpotCheck() {
         <View style={styles.notice}>
           <Text style={[styles.noticeText, { fontSize: contentSize.sm }]}>
             ✅ Full phrase verification passed.{'\n'}
-            Now confirm {SPOT_COUNT} randomly selected words.
+            Now confirm {SPOT_COUNT} randomly selected words from your 24-word phrase.
           </Text>
         </View>
 

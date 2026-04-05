@@ -80,20 +80,20 @@ export function getExplorerTxUrl(
 // ─── Dev / Test shortcuts (NEVER shipped in production builds) ───────────────
 // These are BIP-39 all-zeros test vectors — they have no real funds.
 export const DEV_MNEMONIC =
-  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
 export const DEV_USERNAME = 'devuser';
 
 // Pre-derived addresses for DEV_MNEMONIC
 const DEV_ADDRESSES_MAINNET = {
-  btc: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
-  eth: '0x9858EfFD232B4033E47d90003D41EC34EcaEda94',
-  sol: '4nFZgXtZAEwbfA56LRVRdsDGNeW3U55gr5hL9c5E5de5',
+  btc: 'bc1qzmtrqsfuaf6l6kkcsseumq26ukaphfj9skkug6',
+  eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
+  sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
 };
 // BTC testnet uses coin type 1 → different address; ETH/SOL are network-agnostic
 const DEV_ADDRESSES_TESTNET = {
-  btc: 'tb1q6rz28mcfaxtmd6v789l9rrlrusdprr9pqcpvkl',
-  eth: '0x9858EfFD232B4033E47d90003D41EC34EcaEda94',
-  sol: '4nFZgXtZAEwbfA56LRVRdsDGNeW3U55gr5hL9c5E5de5',
+  btc: 'tb1qtk89me2ae95dmlp3yfl4q9ynpux8mxjujuf2fr',
+  eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
+  sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
 };
 
 export function getDevAddresses() {

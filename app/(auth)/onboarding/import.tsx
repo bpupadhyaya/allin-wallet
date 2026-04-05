@@ -23,7 +23,7 @@ import { Button } from '../../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
-const WORD_COUNT = 12;
+const WORD_COUNT = 24;
 
 export default function ImportScreen() {
   const [words, setWords] = useState<string[]>(Array(WORD_COUNT).fill(''));
@@ -40,7 +40,7 @@ export default function ImportScreen() {
 
     // If user pastes a full phrase into the first box, distribute the words
     const parts = trimmed.split(/\s+/);
-    if (parts.length >= 12 && index === 0) {
+    if (parts.length >= 24 && index === 0) {
       const filled = [...Array(WORD_COUNT).fill('')];
       parts.slice(0, WORD_COUNT).forEach((w, i) => {
         filled[i] = w.toLowerCase();
@@ -88,7 +88,7 @@ export default function ImportScreen() {
       >
         <Text style={[styles.title, { fontSize: fontSize.xl }]}>Import Wallet</Text>
         <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
-          Enter your 12-word recovery phrase in the correct order.
+          Enter your 24-word recovery phrase in the correct order.
         </Text>
 
         {/* Security warning */}
