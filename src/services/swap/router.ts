@@ -27,6 +27,8 @@ export interface SwapQuote {
   provider: 'lifi' | 'thorchain';
   /** Raw provider response — used later to build the actual tx */
   rawData: unknown;
+  /** Quote expiry timestamp (ms) — refuse execution after this */
+  expiresAt: number;
 }
 
 // ─── Chain ID mapping for Li.Fi (now derived from coin config) ──────────────
@@ -175,6 +177,7 @@ async function getLifiQuote(
     priceImpact: parseFloat(data.estimate.priceImpact ?? '0') * 100,
     provider: 'lifi',
     rawData: data,
+    expiresAt: Date.now() + 60_000, // 60s expiry
   };
 }
 
@@ -254,6 +257,14 @@ async function getThorchainQuote(
     );
   }
 
+  // Validate memo fits in OP_RETURN (80 bytes max) before returning quote
+  const memoBytes = new TextEncoder().encode(data.memo);
+  if (memoBytes.length > 80) {
+    throw new Error(
+      `THORChain memo is ${memoBytes.length} bytes (max 80). This swap pair is not supported via BTC.`,
+    );
+  }
+
   const toAmountNum =
     parseInt(data.expected_amount_out ?? '0') / 10 ** to.decimals;
   const outboundFee =
@@ -270,5 +281,6 @@ async function getThorchainQuote(
     priceImpact: parseFloat(data.slippage_bps ?? '0') / 100,
     provider: 'thorchain',
     rawData: data,
+    expiresAt: Date.now() + 60_000, // 60s expiry
   };
 }

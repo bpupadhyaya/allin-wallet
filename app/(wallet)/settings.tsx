@@ -319,10 +319,22 @@ export default function Settings() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Settings</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Settings</Text>
+          <TouchableOpacity
+            style={styles.quickLockBtn}
+            onPress={() => {
+              lock();
+              router.replace('/(auth)/unlock');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.quickLockIcon}>🔒</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Account */}
-        <CollapsibleCard label="Account">
+        <CollapsibleCard label="Account" defaultOpen>
           <SettingRow icon="👤" label="Username" sub={username ?? '—'} />
           <SettingRow icon="🔑" label="Wallet Type" sub={walletType ?? '—'} />
           <SettingRow
@@ -523,7 +535,21 @@ export default function Settings() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxl },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   title: { fontSize: FONT_SIZE.xxl, color: COLORS.text, fontWeight: FONT_WEIGHT.heavy },
+  quickLockBtn: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+  },
+  quickLockIcon: { fontSize: 18 },
   section: { gap: SPACING.sm },
   sectionLabel: {
     color: COLORS.textMuted,

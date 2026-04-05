@@ -211,5 +211,9 @@ export const useAppStore = create<AppState>()((set) => ({
       pendingMnemonic: null,
       pendingSagaPubkey: null,
       wcPendingRequest: null,
+      addresses: null,
+      recentTxs: [],
+      walletType: null,
+      hasWallet: false,
     }),
 }));

@@ -23,14 +23,23 @@ import { Button } from '../../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
-const WORD_COUNT = 24;
+const SUPPORTED_COUNTS = [12, 24] as const;
+const DEFAULT_wordCount = 24;
 
 export default function ImportScreen() {
-  const [words, setWords] = useState<string[]>(Array(WORD_COUNT).fill(''));
-  const [errors, setErrors] = useState<boolean[]>(Array(WORD_COUNT).fill(false));
+  const [wordCount, setWordCount] = useState(DEFAULT_wordCount);
+  const [words, setWords] = useState<string[]>(Array(DEFAULT_wordCount).fill(''));
+  const [errors, setErrors] = useState<boolean[]>(Array(DEFAULT_wordCount).fill(false));
   const [showWarning, setShowWarning] = useState(true);
   const { fontSize, contentSize } = useScaledTheme();
-  const inputRefs = useRef<Array<TextInput | null>>(Array(WORD_COUNT).fill(null));
+  const inputRefs = useRef<Array<TextInput | null>>(Array(DEFAULT_wordCount).fill(null));
+
+  function switchWordCount(count: number) {
+    setWordCount(count);
+    setWords(Array(count).fill(''));
+    setErrors(Array(count).fill(false));
+    inputRefs.current = Array(count).fill(null);
+  }
 
   const setPendingMnemonic = useAppStore((s) => s.setPendingMnemonic);
 
@@ -40,14 +49,16 @@ export default function ImportScreen() {
 
     // If user pastes a full phrase into the first box, distribute the words
     const parts = trimmed.split(/\s+/);
-    if (parts.length >= 24 && index === 0) {
-      const filled = [...Array(WORD_COUNT).fill('')];
-      parts.slice(0, WORD_COUNT).forEach((w, i) => {
+    if (parts.length >= 12 && index === 0) {
+      const pasteCount = parts.length >= 24 ? 24 : 12;
+      if (pasteCount !== wordCount) switchWordCount(pasteCount);
+      const filled = [...Array(pasteCount).fill('')];
+      parts.slice(0, pasteCount).forEach((w, i) => {
         filled[i] = w.toLowerCase();
       });
       setWords(filled);
-      setErrors(Array(WORD_COUNT).fill(false));
-      inputRefs.current[WORD_COUNT - 1]?.focus();
+      setErrors(Array(wordCount).fill(false));
+      inputRefs.current[wordCount - 1]?.focus();
       return;
     }
 
@@ -88,8 +99,23 @@ export default function ImportScreen() {
       >
         <Text style={[styles.title, { fontSize: fontSize.xl }]}>Import Wallet</Text>
         <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
-          Enter your 24-word recovery phrase in the correct order.
+          Enter your {wordCount}-word recovery phrase in the correct order.
         </Text>
+
+        {/* Word count toggle */}
+        <View style={styles.toggleRow}>
+          {SUPPORTED_COUNTS.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[styles.toggleBtn, wordCount === c && styles.toggleActive]}
+              onPress={() => switchWordCount(c)}
+            >
+              <Text style={[styles.toggleText, wordCount === c && styles.toggleTextActive]}>
+                {c} words
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {/* Security warning */}
         {showWarning && (
@@ -108,7 +134,7 @@ export default function ImportScreen() {
 
         {/* Word grid */}
         <View style={styles.grid}>
-          {Array.from({ length: WORD_COUNT }).map((_, i) => (
+          {Array.from({ length: wordCount }).map((_, i) => (
             <View key={i} style={styles.wordRow}>
               <Text style={styles.wordIndex}>{i + 1}.</Text>
               <TextInput
@@ -122,8 +148,8 @@ export default function ImportScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 spellCheck={false}
-                returnKeyType={i < WORD_COUNT - 1 ? 'next' : 'done'}
-                blurOnSubmit={i === WORD_COUNT - 1}
+                returnKeyType={i < wordCount - 1 ? 'next' : 'done'}
+                blurOnSubmit={i === wordCount - 1}
               />
             </View>
           ))}
@@ -187,6 +213,22 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.bold,
     textDecorationLine: 'underline',
   },
+  toggleRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.bgSecondary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: 3,
+    gap: 3,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: BORDER_RADIUS.sm,
+    alignItems: 'center',
+  },
+  toggleActive: { backgroundColor: COLORS.primary },
+  toggleText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
+  toggleTextActive: { color: COLORS.text },
   grid: { gap: SPACING.sm },
   wordRow: {
     flexDirection: 'row',

@@ -74,13 +74,17 @@ export default function CredentialsSetup() {
   // ── Step 1: Validate and advance ──────────────────────────────────────────
   function handleCredentialsNext() {
     let hasError = false;
-    if (username.trim().length < 3) {
+    const trimmedUser = username.trim();
+    if (trimmedUser.length < 3) {
       setUsernameError('Username must be at least 3 characters');
+      hasError = true;
+    } else if (/\s/.test(trimmedUser)) {
+      setUsernameError('Username cannot contain spaces');
       hasError = true;
     } else {
       setUsernameError('');
     }
-    const pwErr = validatePassword(password);
+    const pwErr = validatePassword(password.trim() === '' ? '' : password);
     if (pwErr) {
       setPasswordError(pwErr);
       hasError = true;
@@ -95,6 +99,17 @@ export default function CredentialsSetup() {
 
   // ── Step 2a: First PIN entry ───────────────────────────────────────────────
   function handleFirstPin(pin: string) {
+    // Reject weak PINs
+    if (/^(.)\1{5}$/.test(pin)) {
+      setPinError('PIN cannot be all the same digit (e.g. 000000)');
+      return;
+    }
+    const sequential = '0123456789';
+    const reverseSeq = '9876543210';
+    if (sequential.includes(pin) || reverseSeq.includes(pin)) {
+      setPinError('PIN cannot be a sequential pattern (e.g. 123456)');
+      return;
+    }
     setFirstPin(pin);
     setPinError('');
     setStep('confirm-pin');

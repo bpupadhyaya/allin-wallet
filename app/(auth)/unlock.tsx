@@ -42,6 +42,8 @@ export default function UnlockScreen() {
   const [loading, setLoading] = useState(false);
   const [bioLabel, setBioLabel] = useState('Biometrics');
   const [bioAvailable, setBioAvailable] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
 
   useEffect(() => {
     async function init() {
@@ -50,7 +52,6 @@ export default function UnlockScreen() {
       if (available && enabled) {
         setBioAvailable(true);
         setBioLabel(await getBiometricType());
-        handleBiometric();
       }
     }
     init();
@@ -68,11 +69,32 @@ export default function UnlockScreen() {
     }
   }
 
+  function checkRateLimit(): boolean {
+    if (lockedUntil > Date.now()) {
+      const secs = Math.ceil((lockedUntil - Date.now()) / 1000);
+      setPinError(`Too many attempts. Try again in ${secs}s.`);
+      setPwError(`Too many attempts. Try again in ${secs}s.`);
+      return false;
+    }
+    return true;
+  }
+
+  function recordFailedAttempt() {
+    const next = failedAttempts + 1;
+    setFailedAttempts(next);
+    if (next >= 5) {
+      setLockedUntil(Date.now() + 30_000);
+      setFailedAttempts(0);
+    }
+  }
+
   async function handlePinComplete(pin: string) {
+    if (!checkRateLimit()) return;
     setPinError('');
     try {
       const ok = await verifyPin(pin);
-      if (!ok) { setPinError('Incorrect PIN. Try again.'); return; }
+      if (!ok) { setPinError('Incorrect PIN. Try again.'); recordFailedAttempt(); return; }
+      setFailedAttempts(0);
       unlock();
       router.replace('/(wallet)/dashboard');
     } catch {
@@ -81,12 +103,14 @@ export default function UnlockScreen() {
   }
 
   async function handlePasswordUnlock() {
+    if (!checkRateLimit()) return;
     if (!password) { setPwError('Please enter your password'); return; }
     setLoading(true);
     setPwError('');
     try {
       const ok = await verifyPassword(password);
-      if (!ok) { setPwError('Incorrect password'); return; }
+      if (!ok) { setPwError('Incorrect password'); recordFailedAttempt(); return; }
+      setFailedAttempts(0);
       unlock();
       router.replace('/(wallet)/dashboard');
     } catch {

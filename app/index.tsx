@@ -10,17 +10,22 @@ export default function Index() {
 
   useEffect(() => {
     async function bootstrap() {
-      const walletExists = await hasWallet();
-      if (walletExists) {
-        const [type, addresses, username] = await Promise.all([
-          getWalletType(),
-          getWalletAddresses(),
-          getUsername(),
-        ]);
-        setHasWallet(true, type!);
-        if (addresses) setAddresses(addresses);
-        router.replace('/(auth)/login');
-      } else {
+      try {
+        const walletExists = await hasWallet();
+        if (walletExists) {
+          const [type, addresses, username] = await Promise.all([
+            getWalletType(),
+            getWalletAddresses(),
+            getUsername(),
+          ]);
+          if (type) setHasWallet(true, type);
+          if (addresses) setAddresses(addresses);
+          router.replace('/(auth)/login');
+        } else {
+          router.replace('/(auth)/onboarding');
+        }
+      } catch {
+        // Storage inaccessible — treat as fresh install
         router.replace('/(auth)/onboarding');
       }
     }

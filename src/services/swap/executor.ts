@@ -44,6 +44,10 @@ export async function executeSwap(
   btcSenderAddress?: string,
   onStatusUpdate?: (txHash: string, status: 'confirmed' | 'failed') => void,
 ): Promise<SwapResult> {
+  if (quote.expiresAt && Date.now() > quote.expiresAt) {
+    throw new Error('Quote has expired. Please get a fresh quote before swapping.');
+  }
+
   const mnemonic = await getMnemonic();
   if (!mnemonic) throw new Error('Wallet locked — please log in again.');
 
@@ -103,8 +107,11 @@ async function executeEthSwap(
     };
   };
 
-  if (!lifiData.transactionRequest) {
-    throw new Error('Li.Fi quote missing transactionRequest');
+  if (!lifiData.transactionRequest?.to || !lifiData.transactionRequest?.data) {
+    throw new Error('Li.Fi quote missing or incomplete transactionRequest');
+  }
+  if (!lifiData.action?.fromAmount) {
+    throw new Error('Li.Fi quote missing fromAmount in action');
   }
 
   // ── ERC-20 approval ──────────────────────────────────────────────────────
@@ -135,8 +142,14 @@ async function executeEthSwap(
     const provider = signer.provider!;
     provider
       .waitForTransaction(tx.hash, 1, 10 * 60 * 1000) // up to 10 min
-      .then(() => onStatusUpdate(tx.hash, 'confirmed'))
-      .catch(() => onStatusUpdate(tx.hash, 'failed'));
+      .then((receipt) => {
+        // status 0 = reverted, 1 = success
+        onStatusUpdate(tx.hash, receipt && receipt.status === 1 ? 'confirmed' : 'failed');
+      })
+      .catch(() => {
+        // Timeout or network error — don't mark as failed since tx may still be pending
+        // User can check explorer. We leave status as 'pending'.
+      });
   }
 
   return {
@@ -172,8 +185,14 @@ async function ensureERC20Allowance(
   );
   if (currentAllowance >= requiredAmount) return; // already approved
 
-  // Approve max uint256 to avoid repeated approval txs in the future
-  const approveTx = await erc20.approve(spender, ethers.MaxUint256);
+  // Reset allowance to 0 first if non-zero (required by some tokens like USDT)
+  if (currentAllowance > 0n) {
+    const resetTx = await erc20.approve(spender, 0n);
+    await resetTx.wait(1);
+  }
+
+  // Approve exact amount needed — avoid unlimited approval for security
+  const approveTx = await erc20.approve(spender, requiredAmount);
   // Wait 1 confirmation so the swap tx sees the updated allowance
   await approveTx.wait(1);
 }
@@ -330,6 +349,9 @@ async function executeBtcSwap(
   // Change output (dust threshold: 546 sats)
   if (changeSats > 546) {
     tx.addOutput({ address: senderAddress, amount: BigInt(changeSats) });
+  } else if (changeSats > 0) {
+    // Dust change absorbed into fee — not worth creating an output
+    // Total effective fee = feeSats + changeSats
   }
 
   // 5. Sign all inputs

@@ -26,7 +26,7 @@ export default function SeedBackup() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={[styles.title, { fontSize: fontSize.xxl }]}>Back Up Your Seed Phrase</Text>
         <Text style={[styles.subtitle, { fontSize: contentSize.sm }]}>
-          Confirm you have written down all 12 words exactly as shown, in order.
+          Confirm you have written down all 24 words exactly as shown, in order.
         </Text>
 
         {/* Strong caution */}
@@ -61,7 +61,7 @@ export default function SeedBackup() {
             {confirmed ? <Text style={styles.checkMark}>✓</Text> : null}
           </View>
           <Text style={[styles.checkLabel, { fontSize: contentSize.sm }]}>
-            I have written down all 12 words in the correct order and stored
+            I have written down all 24 words in the correct order and stored
             them in a safe, offline location.
           </Text>
         </TouchableOpacity>
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   wordCard: {
-    width: '30%',
+    width: '23%',
     backgroundColor: COLORS.bgCard,
     borderRadius: BORDER_RADIUS.sm,
     borderWidth: 1,

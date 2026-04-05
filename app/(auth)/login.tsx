@@ -51,6 +51,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricLabel, setBiometricLabel] = useState('Biometrics');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
 
   useEffect(() => {
     async function checkBiometric() {
@@ -59,8 +61,6 @@ export default function LoginScreen() {
       if (available && enabled) {
         setBiometricAvailable(true);
         setBiometricLabel(await getBiometricType());
-        // Auto-trigger biometric prompt on screen load
-        handleBiometricLogin();
       }
     }
     checkBiometric();
@@ -78,8 +78,29 @@ export default function LoginScreen() {
     router.replace('/(wallet)/dashboard');
   }
 
+  // ── Rate limiting ────────────────────────────────────────────────────────
+  function checkRateLimit(): boolean {
+    if (lockedUntil > Date.now()) {
+      const secs = Math.ceil((lockedUntil - Date.now()) / 1000);
+      setPwError(`Too many attempts. Try again in ${secs}s.`);
+      setPinError(`Too many attempts. Try again in ${secs}s.`);
+      return false;
+    }
+    return true;
+  }
+
+  function recordFailedAttempt() {
+    const next = failedAttempts + 1;
+    setFailedAttempts(next);
+    if (next >= 5) {
+      setLockedUntil(Date.now() + 30_000); // 30s lockout
+      setFailedAttempts(0);
+    }
+  }
+
   // ── Password ──────────────────────────────────────────────────────────────
   async function handlePasswordLogin() {
+    if (!checkRateLimit()) return;
     if (!username.trim()) { setPwError('Please enter your username'); return; }
     if (!password) { setPwError('Please enter your password'); return; }
     setLoading(true);
@@ -88,10 +109,12 @@ export default function LoginScreen() {
       const storedUser = await getUsername();
       if (storedUser?.toLowerCase() !== username.trim().toLowerCase()) {
         setPwError('Invalid username or password');
+        recordFailedAttempt();
         return;
       }
       const ok = await verifyPassword(password);
-      if (!ok) { setPwError('Invalid username or password'); return; }
+      if (!ok) { setPwError('Invalid username or password'); recordFailedAttempt(); return; }
+      setFailedAttempts(0);
       await loginSuccess(storedUser);
     } catch {
       setPwError('Login failed. Please try again.');
@@ -102,10 +125,12 @@ export default function LoginScreen() {
 
   // ── PIN ───────────────────────────────────────────────────────────────────
   async function handlePinComplete(pin: string) {
+    if (!checkRateLimit()) return;
     setPinError('');
     try {
       const ok = await verifyPin(pin);
-      if (!ok) { setPinError('Incorrect PIN. Try again.'); return; }
+      if (!ok) { setPinError('Incorrect PIN. Try again.'); recordFailedAttempt(); return; }
+      setFailedAttempts(0);
       const storedUser = await getUsername();
       await loginSuccess(storedUser ?? 'User');
     } catch {
