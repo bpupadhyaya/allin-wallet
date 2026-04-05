@@ -3,6 +3,7 @@ node_modules/
 .expo/
 dist/
 web-build/
+android/app/src/main/assets/index.android.bundle
 expo-env.d.ts
 
 # ── Environment / secrets (NEVER commit) ─────────────────────────────────────

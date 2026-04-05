@@ -4,7 +4,7 @@
  * Any-to-any in-wallet swap. Routes to Li.Fi (ETH/SOL) or THORChain (BTC).
  * Private keys never leave the device — signing happens locally at confirmation.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -333,6 +333,23 @@ export default function SwapScreen() {
   const [swapping, setSwapping] = useState(false);
   const [selectingFrom, setSelectingFrom] = useState(false);
   const [selectingTo, setSelectingTo] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Quote expiry countdown
+  useEffect(() => {
+    if (!quote || result) { setCountdown(null); return; }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((quote.expiresAt - Date.now()) / 1000));
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        setQuote(null);
+        Alert.alert('Quote Expired', 'The quote has expired. Please get a fresh quote.');
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [quote, result]);
 
   const fromConfig = COINS[fromCoin];
   const toConfig = COINS[toCoin];
@@ -589,7 +606,7 @@ export default function SwapScreen() {
                 <ActivityIndicator color={COLORS.text} />
               ) : (
                 <Text style={[styles.actionBtnText, { fontSize: fontSize.lg }]}>
-                  Confirm Swap →
+                  Confirm Swap{countdown != null ? ` (${countdown}s)` : ''} →
                 </Text>
               )}
             </TouchableOpacity>

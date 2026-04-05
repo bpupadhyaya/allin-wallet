@@ -409,12 +409,12 @@ export default function Settings() {
           <SettingRow
             icon="🔑"
             label="Change Password"
-            onPress={() => Alert.alert('Coming Soon', 'Password change in next release.')}
+            onPress={() => router.push('/(wallet)/change-password')}
           />
           <SettingRow
             icon="🔢"
             label="Change PIN"
-            onPress={() => Alert.alert('Coming Soon', 'PIN change in next release.')}
+            onPress={() => router.push('/(wallet)/change-pin')}
           />
           <SettingRow
             icon="🔒"

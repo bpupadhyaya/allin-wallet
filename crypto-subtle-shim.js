@@ -56,8 +56,11 @@ const subtle = {
     const data = keyStore.get(key);
     if (!data) throw new Error('exportKey: unknown key');
     if (format === 'raw') {
-      if (key.type === 'public') return data.raw.buffer.slice(0);
-      if (key.type === 'secret') return data.raw.buffer.slice(0);
+      if (key.type === 'public' || key.type === 'secret') {
+        // Safe slice: handle Uint8Array views that share a larger ArrayBuffer
+        const raw = data.raw;
+        return raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength);
+      }
       throw new Error('exportKey: cannot export private key as raw');
     }
     throw new Error(`exportKey: unsupported format ${format}`);

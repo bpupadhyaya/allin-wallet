@@ -25,6 +25,12 @@ import { getRpc, getExplorerTxUrl, IS_DEV, DEV_MNEMONIC } from '../../constants/
 import { COINS } from '../../constants/coins';
 import type { SwapQuote } from './router';
 
+// Known Li.Fi diamond proxy contracts — https://docs.li.fi/smart-contracts/deployments
+const LIFI_APPROVED_SPENDERS: ReadonlySet<string> = new Set([
+  '0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae', // LiFi Diamond (primary)
+  '0x341e94069f53234fe6dabef707ad424830525715', // LiFi Diamond Immutable
+].map(a => a.toLowerCase()));
+
 export interface SwapResult {
   txHash: string;
   status: 'pending' | 'confirmed' | 'failed';
@@ -118,6 +124,12 @@ async function executeEthSwap(
   // When selling an ERC-20 token (USDC/USDT), the Li.Fi router contract must
   // be approved to spend that token on behalf of the user.
   if (!from.isNative && lifiData.estimate.approvalAddress) {
+    const spender = lifiData.estimate.approvalAddress.toLowerCase();
+    if (!LIFI_APPROVED_SPENDERS.has(spender)) {
+      throw new Error(
+        'Li.Fi returned an unrecognized spender address. Swap aborted for safety.',
+      );
+    }
     await ensureERC20Allowance(
       signer,
       from.contractAddress!,
@@ -228,10 +240,20 @@ async function executeSolSwap(
     maxRetries: 3,
   });
 
-  await connection.confirmTransaction(
-    { signature: sig, blockhash, lastValidBlockHeight },
-    'confirmed',
-  );
+  try {
+    await connection.confirmTransaction(
+      { signature: sig, blockhash, lastValidBlockHeight },
+      'confirmed',
+    );
+  } catch (confirmErr: unknown) {
+    const msg = confirmErr instanceof Error ? confirmErr.message : String(confirmErr);
+    if (msg.includes('block height exceeded') || msg.includes('Blockhash not found')) {
+      throw new Error(
+        'Transaction expired — the Solana network was too congested. Please try again.',
+      );
+    }
+    throw confirmErr;
+  }
 
   return {
     txHash: sig,

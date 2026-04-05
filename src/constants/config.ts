@@ -77,19 +77,20 @@ export function getExplorerTxUrl(
     : `https://solscan.io/tx/${txHash}`;
 }
 
-// ─── Dev / Test shortcuts (NEVER shipped in production builds) ───────────────
+// ─── Dev / Test shortcuts (stripped from production bundles via __DEV__) ──────
 // These are BIP-39 all-zeros test vectors — they have no real funds.
-export const DEV_MNEMONIC =
-  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-export const DEV_USERNAME = 'devuser';
+export const DEV_MNEMONIC = __DEV__
+  ? 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art'
+  : '';
+export const DEV_USERNAME = __DEV__ ? 'devuser' : '';
+export const DEV_PASSWORD = __DEV__ ? 'DevPass123!' : '';
+export const DEV_PIN = __DEV__ ? '123456' : '';
 
-// Pre-derived addresses for DEV_MNEMONIC
 const DEV_ADDRESSES_MAINNET = {
   btc: 'bc1qzmtrqsfuaf6l6kkcsseumq26ukaphfj9skkug6',
   eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
   sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
 };
-// BTC testnet uses coin type 1 → different address; ETH/SOL are network-agnostic
 const DEV_ADDRESSES_TESTNET = {
   btc: 'tb1qtk89me2ae95dmlp3yfl4q9ynpux8mxjujuf2fr',
   eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
@@ -101,9 +102,6 @@ export function getDevAddresses() {
 }
 /** @deprecated Use getDevAddresses() */
 export const DEV_ADDRESSES = DEV_ADDRESSES_MAINNET;
-
-export const DEV_PASSWORD = 'DevPass123!';
-export const DEV_PIN = '123456';
 
 // Security parameters
 export const BCRYPT_ROUNDS_PASSWORD = 12;

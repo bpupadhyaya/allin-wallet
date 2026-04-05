@@ -88,6 +88,8 @@ export default function WalletLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="change-password" options={{ href: null }} />
+      <Tabs.Screen name="change-pin" options={{ href: null }} />
     </Tabs>
   );
 }

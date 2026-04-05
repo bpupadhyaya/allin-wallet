@@ -42,7 +42,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "devMode": true
+      "devMode": false
     }
   }
 }
