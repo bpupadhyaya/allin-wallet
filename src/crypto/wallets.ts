@@ -8,6 +8,7 @@ import { ripemd160 } from '@noble/hashes/ripemd160';
 import { blake2b } from '@noble/hashes/blake2b';
 import { ed25519 } from '@noble/curves/ed25519';
 import { secp256k1 } from '@noble/curves/secp256k1';
+import bs58 from 'bs58';
 import { mnemonicToSeed } from './mnemonic';
 import { isTestnet } from '../constants/config';
 import { createHmac } from 'crypto';
@@ -152,8 +153,7 @@ function deriveDotAddress(seed: Uint8Array): { address: string; publicKey: strin
   full.set(payload);
   full.set(checksum, payload.length);
   // Base58 encode (standard Bitcoin alphabet for SS58)
-  const bs58 = require('bs58');
-  const address = bs58.default.encode(full);
+  const address = bs58.encode(full);
   return { address, publicKey: Buffer.from(pub).toString('hex') };
 }
 

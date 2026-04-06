@@ -18,6 +18,9 @@ import { Connection, VersionedTransaction } from '@solana/web3.js';
 import { ethers } from 'ethers';
 import * as btcSigner from '@scure/btc-signer';
 import axios from 'axios';
+import { sha512 } from '@noble/hashes/sha512';
+import { secp256k1 as secp256k1Curve } from '@noble/curves/secp256k1';
+import { encode as xrpEncode, encodeForSigning as xrpEncodeForSigning } from 'ripple-binary-codec';
 import { getMnemonic } from '../storage';
 import { getEthSigner, getSolKeypair, getBtcKeyPair, getBtcNetwork, getDogeKeyPair, getDogeNetwork, getXrpKeyPair, getPolSigner } from '../../crypto/wallets';
 import { fetchBtcFeeRates, estimateBtcVbytes } from '../fees';
@@ -671,16 +674,14 @@ async function executeXrpSwap(
   };
 
   // Serialize, sign, and submit using ripple binary codec
-  // We use a lightweight approach: serialize → sign → encode → submit
-  const { encode, encodeForSigning } = await import('ripple-binary-codec');
-  const forSigning = encodeForSigning(txJson);
+  const forSigning = xrpEncodeForSigning(txJson);
   const sigBytes = secp256k1Sign(Buffer.from(forSigning, 'hex'), privateKey);
   const signedTx = {
     ...txJson,
     SigningPubKey: Buffer.from(publicKey).toString('hex').toUpperCase(),
     TxnSignature: Buffer.from(sigBytes).toString('hex').toUpperCase(),
   };
-  const txBlob = encode(signedTx);
+  const txBlob = xrpEncode(signedTx);
 
   // Submit
   const { data: submitResult } = await axios.post(getRpc().XRP_RPC, {
@@ -704,11 +705,9 @@ async function executeXrpSwap(
 
 // Minimal secp256k1 signing for XRP (DER-encoded ECDSA signature)
 function secp256k1Sign(msgHash: Buffer, privateKey: Uint8Array): Uint8Array {
-  const { sha512 } = require('@noble/hashes/sha512');
   // XRP uses SHA-512 first half as the signing hash
   const hash = sha512(msgHash).slice(0, 32);
-  const { secp256k1 } = require('@noble/curves/secp256k1');
-  const sig = secp256k1.sign(hash, privateKey, { lowS: true });
+  const sig = secp256k1Curve.sign(hash, privateKey, { lowS: true });
   return sig.toDERRawBytes();
 }
 

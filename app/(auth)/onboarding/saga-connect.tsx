@@ -13,16 +13,22 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  PermissionsAndroid,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../../src/store/appStore';
 import { Button } from '../../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
+import bs58 from 'bs58';
 import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
-// Seed Vault uses BIP-44 URI scheme for derivation paths
-const SOL_DERIVATION_PATH = "bip44:501'/0'/0'";
+// Seed Vault derivation paths — must be valid Android URIs with scheme
+// bip32:/m/... is the full BIP32 URI format the Seed Vault expects
+const SOL_DERIVATION_PATHS = [
+  "bip32:/m/44'/501'/0'",
+  "bip44:/0'",
+];
 
 export default function SagaConnect() {
   const { setPendingSagaPubkey } = useAppStore();
@@ -45,6 +51,20 @@ export default function SagaConnect() {
     setError('');
 
     try {
+      // 0. Request runtime permission for Seed Vault access
+      const granted = await PermissionsAndroid.request(
+        'com.solanamobile.seedvault.ACCESS_SEED_VAULT' as any,
+        {
+          title: 'Seed Vault Access',
+          message: 'AllIn Wallet needs access to your Seed Vault to use your hardware key.',
+          buttonPositive: 'Allow',
+          buttonNegative: 'Deny',
+        },
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        throw new Error('Seed Vault permission denied. Please allow access to continue.');
+      }
+
       // Dynamic import — only available on Android
       const { SeedVault } = await import('@solana-mobile/seed-vault-lib');
 
@@ -78,18 +98,82 @@ export default function SagaConnect() {
       }
 
       // 3. Get the SOL public key from the hardware
-      const pubKeyResult = await SeedVault.getPublicKey(String(authToken), SOL_DERIVATION_PATH);
-      const solAddress = pubKeyResult.publicKeyEncoded;
+      const authTokenStr = String(authToken);
+      let base58Address: string | null = null;
+      const errors: string[] = [];
 
-      if (!solAddress) {
-        throw new Error('Failed to retrieve public key from Seed Vault.');
+      // Helper to decode base64 (possibly URL-safe) public key to base58
+      function decodeKeyToBase58(encoded: any): string | null {
+        if (!encoded) return null;
+        if (encoded instanceof Uint8Array) return bs58.encode(encoded);
+        const s = String(encoded);
+        const normalized = s.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(normalized.length + (4 - (normalized.length % 4)) % 4, '=');
+        return bs58.encode(Buffer.from(padded, 'base64'));
       }
 
-      // 4. Convert base64-encoded public key to base58 for Solana address
-      // The SDK returns base64, but we need base58 for Solana
-      const bs58 = await import('bs58');
-      const pubKeyBytes = Buffer.from(solAddress, 'base64');
-      const base58Address = bs58.default.encode(pubKeyBytes);
+      // All native calls need authToken as String (native .toLong() internally)
+      const tokenStr = String(authToken);
+
+      // Strategy 1: getAccounts — returns pre-derived keys, no path needed
+      try {
+        const accounts = await (SeedVault as any).getAccounts(tokenStr, null, null);
+        if (accounts?.length > 0) {
+          base58Address = decodeKeyToBase58(accounts[0].publicKeyEncoded);
+        } else {
+          errors.push('accounts: empty');
+        }
+      } catch (e: unknown) {
+        errors.push(`accounts: ${e instanceof Error ? e.message : String(e)}`);
+      }
+
+      // Strategy 2: getUserWallets
+      if (!base58Address) {
+        try {
+          const wallets = await (SeedVault as any).getUserWallets(tokenStr);
+          if (wallets?.length > 0) {
+            base58Address = decodeKeyToBase58(wallets[0].publicKeyEncoded);
+          } else {
+            errors.push('wallets: empty');
+          }
+        } catch (e: unknown) {
+          errors.push(`wallets: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+
+      // Strategy 3: resolveDerivationPath then getPublicKey
+      if (!base58Address) {
+        for (const path of SOL_DERIVATION_PATHS) {
+          try {
+            const resolved = await (SeedVault as any).resolveDerivationPath(path);
+            const keyResult = await (SeedVault as any).getPublicKey(tokenStr, resolved);
+            base58Address = decodeKeyToBase58(keyResult?.publicKeyEncoded);
+            if (base58Address) break;
+          } catch (e: unknown) {
+            errors.push(`resolve(${path}): ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+      }
+
+      // Strategy 4: getPublicKey with raw paths
+      if (!base58Address) {
+        for (const path of SOL_DERIVATION_PATHS) {
+          try {
+            const keyResult = await (SeedVault as any).getPublicKey(tokenStr, path);
+            base58Address = decodeKeyToBase58(keyResult?.publicKeyEncoded);
+            if (base58Address) break;
+          } catch (e: unknown) {
+            errors.push(`getPK(${path}): ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+      }
+
+      if (!base58Address) {
+        throw new Error(
+          'Seed Vault auth OK but key derivation failed.\n' +
+          errors.join('\n'),
+        );
+      }
 
       setAddress(base58Address);
       setPendingSagaPubkey(base58Address);
