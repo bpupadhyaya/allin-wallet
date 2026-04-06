@@ -10,6 +10,7 @@ export type CoinSymbol =
   | 'DOT'
   | 'LINK'
   | 'POL'
+  | 'JUP'
   | 'USDC_SOL'
   | 'USDT_SOL'
   | 'USDC_ETH'
@@ -187,6 +188,17 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     testnetLifiChainId: 80002, // Amoy testnet
     color: '#8247E5',
     icon: '⬟',
+  },
+  JUP: {
+    symbol: 'JUP',
+    name: 'Jupiter',
+    chain: 'solana',
+    decimals: 6,
+    isNative: false,
+    contractAddress: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+    lifiChainId: 1151111081099710,
+    color: '#2BD67B',
+    icon: '♃',
   },
 };
 

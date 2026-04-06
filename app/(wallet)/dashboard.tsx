@@ -81,7 +81,11 @@ function CoinRow({ symbol }: { symbol: CoinSymbol }) {
   const changeColor = change > 0 ? COLORS.success : change < 0 ? COLORS.danger : COLORS.textMuted;
 
   return (
-    <View style={rowStyles.row}>
+    <TouchableOpacity
+      style={rowStyles.row}
+      onPress={() => router.push({ pathname: '/(wallet)/coin-detail', params: { symbol } })}
+      activeOpacity={0.7}
+    >
       <View style={[rowStyles.icon, { backgroundColor: coin.color + '22', width: 40 * uiScale, height: 40 * uiScale, borderRadius: 20 * uiScale }]}>
         <Text style={[rowStyles.iconText, { color: coin.color, fontSize: scaleFont(20) }]}>{coin.icon}</Text>
       </View>
@@ -109,7 +113,7 @@ function CoinRow({ symbol }: { symbol: CoinSymbol }) {
         <Text style={[rowStyles.balance, { fontSize: fontSize.sm }]}>{balanceDisplay} {coin.symbol.replace('_', ' ')}</Text>
         <Text style={[rowStyles.usd, { fontSize: fontSize.xs }]}>{usdValue > 0 ? formatUsd(usdValue) : '—'}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

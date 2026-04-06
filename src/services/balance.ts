@@ -17,6 +17,7 @@ const DEV_BALANCES: Balances = {
   DOT:      50,
   LINK:     10,
   POL:      500,
+  JUP:      50,
   USDC_SOL: 100,
   USDT_SOL: 100,
   USDC_ETH: 100,
@@ -33,6 +34,7 @@ export interface Balances {
   DOT: number;
   LINK: number;
   POL: number;
+  JUP: number;
   USDC_SOL: number;
   USDT_SOL: number;
   USDC_ETH: number;
@@ -41,7 +43,7 @@ export interface Balances {
 
 export const ZERO_BALANCES: Balances = {
   BTC: 0, ETH: 0, SOL: 0,
-  ADA: 0, DOGE: 0, XRP: 0, DOT: 0, LINK: 0, POL: 0,
+  ADA: 0, DOGE: 0, XRP: 0, DOT: 0, LINK: 0, POL: 0, JUP: 0,
   USDC_SOL: 0, USDT_SOL: 0, USDC_ETH: 0, USDT_ETH: 0,
 };
 
@@ -55,6 +57,7 @@ function getTokenAddresses() {
     USDT_ETH: getContractAddress(COINS.USDT_ETH)!,
     USDC_SOL_MINT: getContractAddress(COINS.USDC_SOL)!,
     USDT_SOL_MINT: getContractAddress(COINS.USDT_SOL)!,
+    JUP_MINT: getContractAddress(COINS.JUP)!,
   };
 }
 const SPL_TOKEN_PROGRAM_ID = new PublicKey(
@@ -103,6 +106,7 @@ export async function fetchAllBalances(addresses: {
     USDC_ETH: eth?.USDC_ETH ?? 0,
     USDT_ETH: eth?.USDT_ETH ?? 0,
     SOL: sol?.SOL ?? 0,
+    JUP: sol?.JUP ?? 0,
     USDC_SOL: sol?.USDC_SOL ?? 0,
     USDT_SOL: sol?.USDT_SOL ?? 0,
     ADA: adaRes.status === 'fulfilled' ? adaRes.value : 0,
@@ -161,6 +165,7 @@ async function fetchSolBalances(address: string): Promise<{
   SOL: number;
   USDC_SOL: number;
   USDT_SOL: number;
+  JUP: number;
 }> {
   const connection = new Connection(getRpc().SOLANA, 'confirmed');
   const pubkey = new PublicKey(address);
@@ -174,6 +179,7 @@ async function fetchSolBalances(address: string): Promise<{
 
   let USDC_SOL = 0;
   let USDT_SOL = 0;
+  let JUP = 0;
 
   for (const { account } of tokenAccounts.value) {
     const info = account.data.parsed.info as {
@@ -183,9 +189,10 @@ async function fetchSolBalances(address: string): Promise<{
     const tokens = getTokenAddresses();
     if (info.mint === tokens.USDC_SOL_MINT) USDC_SOL = info.tokenAmount.uiAmount ?? 0;
     if (info.mint === tokens.USDT_SOL_MINT) USDT_SOL = info.tokenAmount.uiAmount ?? 0;
+    if (info.mint === tokens.JUP_MINT) JUP = info.tokenAmount.uiAmount ?? 0;
   }
 
-  return { SOL: lamports / LAMPORTS_PER_SOL, USDC_SOL, USDT_SOL };
+  return { SOL: lamports / LAMPORTS_PER_SOL, USDC_SOL, USDT_SOL, JUP };
 }
 
 // ─── Cardano ──────────────────────────────────────────────────────────────
