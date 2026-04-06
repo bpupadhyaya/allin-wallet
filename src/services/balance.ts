@@ -8,9 +8,15 @@ import { COINS, getContractAddress } from '../constants/coins';
 // Returned instantly when the dev account is active (IS_DEV + abandon mnemonic).
 // Never compiled into production — IS_DEV is false in EAS release builds.
 const DEV_BALANCES: Balances = {
-  BTC:      0.05,    // ~$4 000 — enough to test THORChain swap minimums
+  BTC:      0.05,
   ETH:      0.5,
   SOL:      25,
+  ADA:      500,
+  DOGE:     1000,
+  XRP:      200,
+  DOT:      50,
+  LINK:     10,
+  POL:      500,
   USDC_SOL: 100,
   USDT_SOL: 100,
   USDC_ETH: 100,
@@ -21,6 +27,12 @@ export interface Balances {
   BTC: number;
   ETH: number;
   SOL: number;
+  ADA: number;
+  DOGE: number;
+  XRP: number;
+  DOT: number;
+  LINK: number;
+  POL: number;
   USDC_SOL: number;
   USDT_SOL: number;
   USDC_ETH: number;
@@ -28,13 +40,9 @@ export interface Balances {
 }
 
 export const ZERO_BALANCES: Balances = {
-  BTC: 0,
-  ETH: 0,
-  SOL: 0,
-  USDC_SOL: 0,
-  USDT_SOL: 0,
-  USDC_ETH: 0,
-  USDT_ETH: 0,
+  BTC: 0, ETH: 0, SOL: 0,
+  ADA: 0, DOGE: 0, XRP: 0, DOT: 0, LINK: 0, POL: 0,
+  USDC_SOL: 0, USDT_SOL: 0, USDC_ETH: 0, USDT_ETH: 0,
 };
 
 const ERC20_ABI = [
@@ -57,9 +65,12 @@ export async function fetchAllBalances(addresses: {
   btc: string;
   eth: string;
   sol: string;
+  ada: string;
+  doge: string;
+  xrp: string;
+  dot: string;
+  pol: string;
 }): Promise<Balances> {
-  // In dev builds, return instant mock balances for the dev test wallet so
-  // swap / send flows can be exercised without real on-chain funds.
   const devAddrs = getDevAddresses();
   if (
     IS_DEV &&
@@ -70,23 +81,35 @@ export async function fetchAllBalances(addresses: {
     return { ...DEV_BALANCES };
   }
 
-  const [btcRes, ethRes, solRes] = await Promise.allSettled([
+  const [btcRes, ethRes, solRes, adaRes, dogeRes, xrpRes, dotRes, polRes] = await Promise.allSettled([
     addresses.btc ? fetchBtcBalance(addresses.btc) : Promise.resolve(0),
     addresses.eth ? fetchEthBalances(addresses.eth) : Promise.resolve(null),
     addresses.sol ? fetchSolBalances(addresses.sol) : Promise.resolve(null),
+    addresses.ada ? fetchAdaBalance(addresses.ada) : Promise.resolve(0),
+    addresses.doge ? fetchDogeBalance(addresses.doge) : Promise.resolve(0),
+    addresses.xrp ? fetchXrpBalance(addresses.xrp) : Promise.resolve(0),
+    addresses.dot ? fetchDotBalance(addresses.dot) : Promise.resolve(0),
+    addresses.pol ? fetchPolBalances(addresses.pol) : Promise.resolve(null),
   ]);
 
   const eth = ethRes.status === 'fulfilled' ? ethRes.value : null;
   const sol = solRes.status === 'fulfilled' ? solRes.value : null;
+  const pol = polRes.status === 'fulfilled' ? polRes.value : null;
 
   return {
     BTC: btcRes.status === 'fulfilled' ? btcRes.value : 0,
     ETH: eth?.ETH ?? 0,
+    LINK: eth?.LINK ?? 0,
     USDC_ETH: eth?.USDC_ETH ?? 0,
     USDT_ETH: eth?.USDT_ETH ?? 0,
     SOL: sol?.SOL ?? 0,
     USDC_SOL: sol?.USDC_SOL ?? 0,
     USDT_SOL: sol?.USDT_SOL ?? 0,
+    ADA: adaRes.status === 'fulfilled' ? adaRes.value : 0,
+    DOGE: dogeRes.status === 'fulfilled' ? dogeRes.value : 0,
+    XRP: xrpRes.status === 'fulfilled' ? xrpRes.value : 0,
+    DOT: dotRes.status === 'fulfilled' ? dotRes.value : 0,
+    POL: pol?.POL ?? 0,
   };
 }
 
@@ -103,18 +126,21 @@ async function fetchBtcBalance(address: string): Promise<number> {
 
 async function fetchEthBalances(address: string): Promise<{
   ETH: number;
+  LINK: number;
   USDC_ETH: number;
   USDT_ETH: number;
 }> {
   const tokens = getTokenAddresses();
   const provider = new ethers.JsonRpcProvider(getRpc().ETHEREUM);
-  const [ethBal, usdcBal, usdtBal] = await Promise.all([
+  const [ethBal, linkBal, usdcBal, usdtBal] = await Promise.all([
     provider.getBalance(address),
+    getERC20Balance(provider, getContractAddress(COINS.LINK)!, address, 18),
     getERC20Balance(provider, tokens.USDC_ETH, address, 6),
     getERC20Balance(provider, tokens.USDT_ETH, address, 6),
   ]);
   return {
     ETH: parseFloat(ethers.formatEther(ethBal)),
+    LINK: linkBal,
     USDC_ETH: usdcBal,
     USDT_ETH: usdtBal,
   };
@@ -160,4 +186,73 @@ async function fetchSolBalances(address: string): Promise<{
   }
 
   return { SOL: lamports / LAMPORTS_PER_SOL, USDC_SOL, USDT_SOL };
+}
+
+// ─── Cardano ──────────────────────────────────────────────────────────────
+async function fetchAdaBalance(address: string): Promise<number> {
+  try {
+    const { data } = await axios.get(
+      `${getRpc().CARDANO_API}/addresses/${address}`,
+      { timeout: 10000, headers: { project_id: process.env.EXPO_PUBLIC_BLOCKFROST_KEY || '' } },
+    );
+    // Blockfrost returns lovelace as string in amount array
+    const lovelace = data.amount?.find((a: any) => a.unit === 'lovelace');
+    return lovelace ? parseInt(lovelace.quantity) / 1e6 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Dogecoin ─────────────────────────────────────────────────────────────
+async function fetchDogeBalance(address: string): Promise<number> {
+  try {
+    const { data } = await axios.get(
+      `${getRpc().DOGECOIN_API}/address/balance/${address}`,
+      { timeout: 10000 },
+    );
+    return parseFloat(data.balance ?? '0');
+  } catch {
+    return 0;
+  }
+}
+
+// ─── XRP ──────────────────────────────────────────────────────────────────
+async function fetchXrpBalance(address: string): Promise<number> {
+  try {
+    const { data } = await axios.post(getRpc().XRP_RPC, {
+      method: 'account_info',
+      params: [{ account: address, ledger_index: 'validated' }],
+    }, { timeout: 10000 });
+    const drops = data.result?.account_data?.Balance;
+    return drops ? parseInt(drops) / 1e6 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Polkadot ─────────────────────────────────────────────────────────────
+async function fetchDotBalance(address: string): Promise<number> {
+  try {
+    // Use Subscan API for simplicity
+    const { data } = await axios.post(
+      'https://polkadot.api.subscan.io/api/v2/scan/search',
+      { key: address },
+      { timeout: 10000, headers: { 'Content-Type': 'application/json' } },
+    );
+    const balance = data.data?.account?.balance;
+    return balance ? parseFloat(balance) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ─── Polygon ──────────────────────────────────────────────────────────────
+async function fetchPolBalances(address: string): Promise<{ POL: number }> {
+  try {
+    const provider = new ethers.JsonRpcProvider(getRpc().POLYGON_RPC);
+    const bal = await provider.getBalance(address);
+    return { POL: parseFloat(ethers.formatEther(bal)) };
+  } catch {
+    return { POL: 0 };
+  }
 }

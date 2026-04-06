@@ -85,6 +85,11 @@ export interface WalletAddresses {
   btc: string;
   eth: string;
   sol: string;
+  ada: string;
+  doge: string;
+  xrp: string;
+  dot: string;
+  pol: string;
 }
 
 export async function saveWalletType(type: WalletType): Promise<void> {

@@ -11,11 +11,13 @@ export type PriceChanges = Record<CoinSymbol, number>;
 
 export const ZERO_PRICES: Prices = {
   BTC: 0, ETH: 0, SOL: 0,
+  ADA: 0, DOGE: 0, XRP: 0, DOT: 0, LINK: 0, POL: 0,
   USDC_SOL: 1, USDT_SOL: 1,
   USDC_ETH: 1, USDT_ETH: 1,
 };
 export const ZERO_CHANGES: PriceChanges = {
   BTC: 0, ETH: 0, SOL: 0,
+  ADA: 0, DOGE: 0, XRP: 0, DOT: 0, LINK: 0, POL: 0,
   USDC_SOL: 0, USDT_SOL: 0,
   USDC_ETH: 0, USDT_ETH: 0,
 };
@@ -24,13 +26,19 @@ const COINGECKO_IDS: Record<string, CoinSymbol[]> = {
   bitcoin:   ['BTC'],
   ethereum:  ['ETH'],
   solana:    ['SOL'],
+  cardano:   ['ADA'],
+  dogecoin:  ['DOGE'],
+  ripple:    ['XRP'],
+  polkadot:  ['DOT'],
+  chainlink: ['LINK'],
+  'polygon-ecosystem-token': ['POL'],
   'usd-coin': ['USDC_SOL', 'USDC_ETH'],
   tether:    ['USDT_SOL', 'USDT_ETH'],
 };
 
 const CG_URL =
   'https://api.coingecko.com/api/v3/simple/price' +
-  '?ids=bitcoin,ethereum,solana,usd-coin,tether' +
+  '?ids=bitcoin,ethereum,solana,cardano,dogecoin,ripple,polkadot,chainlink,polygon-ecosystem-token,usd-coin,tether' +
   '&vs_currencies=usd&include_24hr_change=true';
 
 export interface PriceFetchResult {

@@ -140,6 +140,11 @@ export default function CredentialsSetup() {
           btc: derived.btc.address,
           eth: derived.eth.address,
           sol: derived.sol.address,
+          ada: derived.ada.address,
+          doge: derived.doge.address,
+          xrp: derived.xrp.address,
+          dot: derived.dot.address,
+          pol: derived.pol.address,
         };
       } else if (pendingSagaPubkey) {
         walletType = 'saga';
@@ -149,6 +154,11 @@ export default function CredentialsSetup() {
           btc: derived.btc.address,
           eth: derived.eth.address,
           sol: derived.sol.address,
+          ada: derived.ada.address,
+          doge: derived.doge.address,
+          xrp: derived.xrp.address,
+          dot: derived.dot.address,
+          pol: derived.pol.address,
         };
       } else {
         Alert.alert('Error', 'No wallet key found. Please restart onboarding.');

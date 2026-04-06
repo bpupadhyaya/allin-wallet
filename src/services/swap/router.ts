@@ -36,7 +36,8 @@ export interface SwapQuote {
 // ─── THORChain supported pairs ──────────────────────────────────────────────
 // THORChain supports native assets and major ERC-20s, but NOT Solana SPL tokens.
 const THORCHAIN_SUPPORTED: Set<CoinSymbol> = new Set([
-  'BTC', 'ETH', 'SOL', 'USDC_ETH', 'USDT_ETH',
+  'BTC', 'ETH', 'SOL', 'DOGE', 'XRP',
+  'USDC_ETH', 'USDT_ETH',
 ]);
 
 // ─── THORChain asset string helpers ─────────────────────────────────────────
@@ -48,15 +49,17 @@ function toThorAsset(coin: (typeof COINS)[CoinSymbol]): string {
       return 'ETH.ETH';
     case 'SOL':
       return 'SOL.SOL';
+    case 'DOGE':
+      return 'DOGE.DOGE';
+    case 'XRP':
+      return 'XRP.XRP';
     case 'USDC_ETH':
       return `ETH.USDC-${coin.contractAddress!.toUpperCase()}`;
     case 'USDT_ETH':
       return `ETH.USDT-${coin.contractAddress!.toUpperCase()}`;
     case 'USDC_SOL':
-      // THORChain Solana USDC: SOL.USDC-<mint address>
       return `SOL.USDC-${coin.contractAddress}`;
     case 'USDT_SOL':
-      // THORChain Solana USDT: SOL.USDT-<mint address>
       return `SOL.USDT-${coin.contractAddress}`;
     default:
       return coin.symbol;
@@ -86,17 +89,24 @@ export async function getSwapQuote(
   const from = COINS[fromCoin];
   const to = COINS[toCoin];
 
-  // BTC always goes through THORChain (native UTXO chain, Li.Fi wraps it)
-  if (from.chain === 'bitcoin' || to.chain === 'bitcoin') {
-    return getThorchainQuote(
-      fromCoin,
-      toCoin,
-      fromAmount,
-      slippagePct,
-      destinationAddress,
+  // Chains that require THORChain (no Li.Fi support)
+  const thorchainOnlyChains: Set<string> = new Set(['bitcoin', 'dogecoin', 'xrp']);
+  const needsThorchain = thorchainOnlyChains.has(from.chain) || thorchainOnlyChains.has(to.chain);
+
+  // ADA, DOT have no aggregator support yet — check THORChain first, fall through to error
+  const noAggregatorChains: Set<string> = new Set(['cardano', 'polkadot']);
+  if (noAggregatorChains.has(from.chain) || noAggregatorChains.has(to.chain)) {
+    throw new Error(
+      `Direct swaps involving ${from.chain === 'cardano' || from.chain === 'polkadot' ? from.name : to.name} ` +
+      `are not yet supported. Swap to ETH or SOL first, then swap to your target token.`,
     );
   }
 
+  if (needsThorchain) {
+    return getThorchainQuote(fromCoin, toCoin, fromAmount, slippagePct, destinationAddress);
+  }
+
+  // EVM and Solana tokens go through Li.Fi (including LINK, POL on Polygon)
   return getLifiQuote(fromCoin, toCoin, fromAmount, slippagePct);
 }
 

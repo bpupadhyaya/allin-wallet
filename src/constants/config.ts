@@ -23,12 +23,22 @@ const RPC_MAINNET = {
   ETHEREUM: process.env.EXPO_PUBLIC_ETH_RPC || 'https://eth.llamarpc.com',
   SOLANA: process.env.EXPO_PUBLIC_SOL_RPC || 'https://api.mainnet-beta.solana.com',
   BITCOIN_API: process.env.EXPO_PUBLIC_BTC_API || 'https://mempool.space/api',
+  CARDANO_API: 'https://cardano-mainnet.blockfrost.io/api/v0',
+  DOGECOIN_API: 'https://dogechain.info/api/v1',
+  XRP_RPC: 'https://xrplcluster.com',
+  POLKADOT_RPC: 'https://rpc.polkadot.io',
+  POLYGON_RPC: 'https://polygon-rpc.com',
 };
 
 const RPC_TESTNET = {
   ETHEREUM: 'https://rpc.sepolia.org',
   SOLANA: 'https://api.devnet.solana.com',
   BITCOIN_API: 'https://mempool.space/testnet4/api',
+  CARDANO_API: 'https://cardano-preprod.blockfrost.io/api/v0',
+  DOGECOIN_API: 'https://dogechain.info/api/v1',
+  XRP_RPC: 'https://s.altnet.rippletest.net:51234',
+  POLKADOT_RPC: 'https://westend-rpc.polkadot.io',
+  POLYGON_RPC: 'https://rpc-amoy.polygon.technology',
 };
 
 /** @deprecated Use getRpc() for testnet-aware endpoints */
@@ -58,7 +68,7 @@ export const WC_PROJECT_ID = process.env.EXPO_PUBLIC_WC_PROJECT_ID || '';
 // ─── Explorer URLs ──────────────────────────────────────────────────────────
 
 export function getExplorerTxUrl(
-  chain: 'bitcoin' | 'ethereum' | 'solana',
+  chain: string,
   txHash: string,
 ): string {
   if (chain === 'bitcoin') {
@@ -70,6 +80,27 @@ export function getExplorerTxUrl(
     return _testnet
       ? `https://sepolia.etherscan.io/tx/${txHash}`
       : `https://etherscan.io/tx/${txHash}`;
+  }
+  if (chain === 'cardano') {
+    return _testnet
+      ? `https://preprod.cardanoscan.io/transaction/${txHash}`
+      : `https://cardanoscan.io/transaction/${txHash}`;
+  }
+  if (chain === 'dogecoin') {
+    return `https://dogechain.info/tx/${txHash}`;
+  }
+  if (chain === 'xrp') {
+    return _testnet
+      ? `https://testnet.xrpl.org/transactions/${txHash}`
+      : `https://xrpscan.com/tx/${txHash}`;
+  }
+  if (chain === 'polkadot') {
+    return `https://polkadot.subscan.io/extrinsic/${txHash}`;
+  }
+  if (chain === 'polygon') {
+    return _testnet
+      ? `https://amoy.polygonscan.com/tx/${txHash}`
+      : `https://polygonscan.com/tx/${txHash}`;
   }
   // solana
   return _testnet

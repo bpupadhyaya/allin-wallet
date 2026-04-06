@@ -21,8 +21,8 @@ import { Button } from '../../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useScaledTheme } from '../../../src/hooks/useScaledTheme';
 
-// SOL derivation path (BIP-44 / SLIP-10 ed25519)
-const SOL_DERIVATION_PATH = "m/44'/501'/0'/0'";
+// Seed Vault uses BIP-44 URI scheme for derivation paths
+const SOL_DERIVATION_PATH = "bip44:501'/0'/0'";
 
 export default function SagaConnect() {
   const { setPendingSagaPubkey } = useAppStore();
@@ -54,29 +54,31 @@ export default function SagaConnect() {
         throw new Error('Seed Vault is not available on this device. This feature requires a Solana Seeker or Saga phone.');
       }
 
-      // 2. Check for existing authorized seeds first
-      const existingSeeds = await SeedVault.getAuthorizedSeeds();
+      // 2. Authorize access to a seed in the Seed Vault
       let authToken: number;
 
-      if (existingSeeds.length > 0) {
-        // Use the first authorized seed
-        authToken = existingSeeds[0].authToken;
-      } else {
-        // Check if there are unauthorized seeds to authorize
-        const hasSeeds = await SeedVault.hasUnauthorizedSeeds();
-        if (hasSeeds) {
-          // Authorize access to existing seed (prompts user for biometric)
+      try {
+        // Try to get existing authorized seeds first
+        const existingSeeds = await SeedVault.getAuthorizedSeeds();
+        if (existingSeeds.length > 0) {
+          authToken = existingSeeds[0].authToken;
+        } else {
+          throw new Error('no_authorized');
+        }
+      } catch {
+        // No authorized seeds — request authorization (prompts biometric)
+        try {
           const result = await SeedVault.authorizeNewSeed();
           authToken = result.authToken;
-        } else {
-          // No seeds at all — create a new one in the Seed Vault
+        } catch {
+          // No seeds exist at all — create a new one
           const result = await SeedVault.createNewSeed();
           authToken = result.authToken;
         }
       }
 
       // 3. Get the SOL public key from the hardware
-      const pubKeyResult = await SeedVault.getPublicKey(authToken, SOL_DERIVATION_PATH);
+      const pubKeyResult = await SeedVault.getPublicKey(String(authToken), SOL_DERIVATION_PATH);
       const solAddress = pubKeyResult.publicKeyEncoded;
 
       if (!solAddress) {

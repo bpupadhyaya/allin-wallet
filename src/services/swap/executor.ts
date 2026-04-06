@@ -19,7 +19,7 @@ import { ethers } from 'ethers';
 import * as btcSigner from '@scure/btc-signer';
 import axios from 'axios';
 import { getMnemonic } from '../storage';
-import { getEthSigner, getSolKeypair, getBtcKeyPair, getBtcNetwork } from '../../crypto/wallets';
+import { getEthSigner, getSolKeypair, getBtcKeyPair, getBtcNetwork, getDogeKeyPair, getDogeNetwork, getXrpKeyPair, getPolSigner } from '../../crypto/wallets';
 import { fetchBtcFeeRates, estimateBtcVbytes } from '../fees';
 import { getRpc, getExplorerTxUrl, IS_DEV, DEV_MNEMONIC } from '../../constants/config';
 import { COINS } from '../../constants/coins';
@@ -81,6 +81,11 @@ export async function executeSwap(
     case 'bitcoin':
       if (!btcSenderAddress) throw new Error('BTC sender address required');
       return executeBtcSwap(quote, mnemonic, btcSenderAddress);
+    case 'dogecoin':
+      if (!btcSenderAddress) throw new Error('DOGE sender address required');
+      return executeDogeSwap(quote, mnemonic, btcSenderAddress);
+    case 'polygon':
+      return executePolSwap(quote, mnemonic, onStatusUpdate);
     default:
       throw new Error(`Unsupported source chain: ${from.chain}`);
   }
@@ -402,6 +407,169 @@ async function fetchBtcUtxos(address: string): Promise<BtcUtxo[]> {
     `${getRpc().BITCOIN_API}/address/${address}/utxo`,
     { timeout: 10000 },
   );
-  // Only use confirmed UTXOs for safety
   return data.filter((u) => u.status.confirmed);
+}
+
+// ─── Dogecoin via THORChain ───────────────────────────────────────────────
+// DOGE is UTXO-based like BTC but uses P2PKH (no SegWit).
+
+async function executeDogeSwap(
+  quote: SwapQuote,
+  mnemonic: string,
+  senderAddress: string,
+): Promise<SwapResult> {
+  const rawData = quote.rawData as {
+    inbound_address: string;
+    memo: string;
+  };
+
+  if (!rawData.inbound_address || !rawData.memo) {
+    throw new Error('THORChain quote missing inbound_address or memo');
+  }
+
+  // Fetch UTXOs from dogechain.info
+  const utxos = await fetchDogeUtxos(senderAddress);
+  if (utxos.length === 0) throw new Error('No confirmed DOGE UTXOs available');
+
+  const amountSats = Math.round(quote.fromAmount * 1e8);
+  const feeRateSatVbyte = 10; // DOGE fees are very low
+  const NUM_OUTPUTS = 3;
+
+  // Coin selection
+  const sorted = [...utxos].sort((a, b) => b.value - a.value);
+  const selected: BtcUtxo[] = [];
+  let selectedTotal = 0;
+
+  for (const utxo of sorted) {
+    selected.push(utxo);
+    selectedTotal += utxo.value;
+    // P2PKH: ~148 bytes per input, ~34 per output, ~10 overhead
+    const estSize = selected.length * 148 + NUM_OUTPUTS * 34 + 10;
+    const feeSats = Math.ceil(estSize * feeRateSatVbyte);
+    if (selectedTotal >= amountSats + feeSats) break;
+  }
+
+  const estSize = selected.length * 148 + NUM_OUTPUTS * 34 + 10;
+  const feeSats = Math.ceil(estSize * feeRateSatVbyte);
+  const totalNeeded = amountSats + feeSats;
+
+  if (selectedTotal < totalNeeded) {
+    throw new Error(`Insufficient DOGE balance. Need ${(totalNeeded / 1e8).toFixed(8)} DOGE.`);
+  }
+
+  const changeSats = selectedTotal - amountSats - feeSats;
+
+  const { privateKey: dogePrivKey, publicKey: dogePubKey } = await getDogeKeyPair(mnemonic);
+  const dogeNet = getDogeNetwork();
+  const senderScript = btcSigner.p2pkh(dogePubKey, dogeNet).script;
+
+  const tx = new btcSigner.Transaction({ allowUnknownOutputs: true });
+
+  for (const utxo of selected) {
+    tx.addInput({
+      txid: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: { script: senderScript, amount: BigInt(utxo.value) },
+    });
+  }
+
+  tx.addOutput({ address: rawData.inbound_address, amount: BigInt(amountSats) });
+
+  const memoBytes = new TextEncoder().encode(rawData.memo);
+  tx.addOutput({ script: btcSigner.Script.encode(['RETURN', memoBytes]), amount: 0n });
+
+  if (changeSats > 100000) { // DOGE dust threshold ~0.001 DOGE = 100000 sats
+    tx.addOutput({ address: senderAddress, amount: BigInt(changeSats) });
+  }
+
+  for (let i = 0; i < selected.length; i++) {
+    tx.signIdx(dogePrivKey, i);
+  }
+  tx.finalize();
+
+  const txHex = Buffer.from(tx.extract()).toString('hex');
+  // Broadcast via dogechain.info or blockcypher
+  const { data: broadcastResult } = await axios.post(
+    'https://api.blockcypher.com/v1/doge/main/txs/push',
+    { tx: txHex },
+    { timeout: 15000 },
+  );
+
+  const txHash = broadcastResult.tx?.hash || broadcastResult.hash || txHex.slice(0, 64);
+  return {
+    txHash,
+    status: 'pending',
+    explorerUrl: getExplorerTxUrl('dogecoin', txHash),
+  };
+}
+
+async function fetchDogeUtxos(address: string): Promise<BtcUtxo[]> {
+  try {
+    const { data } = await axios.get(
+      `https://api.blockcypher.com/v1/doge/main/addrs/${address}?unspentOnly=true`,
+      { timeout: 10000 },
+    );
+    return (data.txrefs || []).map((ref: any) => ({
+      txid: ref.tx_hash,
+      vout: ref.tx_output_n,
+      value: ref.value,
+      status: { confirmed: ref.confirmations > 0 },
+    })).filter((u: BtcUtxo) => u.status.confirmed);
+  } catch {
+    return [];
+  }
+}
+
+// ─── Polygon via Li.Fi ────────────────────────────────────────────────────
+// POL swaps work like ETH swaps — EVM-compatible, same signing logic.
+
+async function executePolSwap(
+  quote: SwapQuote,
+  mnemonic: string,
+  onStatusUpdate?: (txHash: string, status: 'confirmed' | 'failed') => void,
+): Promise<SwapResult> {
+  const signer = await getPolSigner(mnemonic, getRpc().POLYGON_RPC);
+  const from = COINS[quote.fromCoin];
+
+  const lifiData = quote.rawData as {
+    estimate: { approvalAddress?: string };
+    action: { fromAmount: string; fromToken: { address: string } };
+    transactionRequest?: { to: string; data: string; value?: string; gasLimit?: string };
+  };
+
+  if (!lifiData.transactionRequest?.to || !lifiData.transactionRequest?.data) {
+    throw new Error('Li.Fi quote missing or incomplete transactionRequest');
+  }
+
+  if (!from.isNative && lifiData.estimate.approvalAddress) {
+    const spender = lifiData.estimate.approvalAddress.toLowerCase();
+    if (!LIFI_APPROVED_SPENDERS.has(spender)) {
+      throw new Error('Li.Fi returned an unrecognized spender address. Swap aborted.');
+    }
+    await ensureERC20Allowance(signer, from.contractAddress!, lifiData.estimate.approvalAddress, BigInt(lifiData.action.fromAmount));
+  }
+
+  const txReq = lifiData.transactionRequest;
+  const tx = await signer.sendTransaction({
+    to: txReq.to,
+    data: txReq.data,
+    value: txReq.value ? BigInt(txReq.value) : 0n,
+    ...(txReq.gasLimit ? { gasLimit: BigInt(txReq.gasLimit) } : {}),
+  });
+
+  if (onStatusUpdate) {
+    const provider = signer.provider!;
+    provider
+      .waitForTransaction(tx.hash, 1, 10 * 60 * 1000)
+      .then((receipt) => {
+        onStatusUpdate(tx.hash, receipt && receipt.status === 1 ? 'confirmed' : 'failed');
+      })
+      .catch(() => {});
+  }
+
+  return {
+    txHash: tx.hash,
+    status: 'pending',
+    explorerUrl: getExplorerTxUrl('polygon', tx.hash),
+  };
 }

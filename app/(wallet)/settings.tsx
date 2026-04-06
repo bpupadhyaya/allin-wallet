@@ -24,6 +24,7 @@ import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/constants/config';
 import { saveTestnetEnabled } from '../../src/services/storage';
 import { deriveWalletsFromMnemonic } from '../../src/crypto/wallets';
+import { ZERO_BALANCES } from '../../src/services/balance';
 import { getMnemonic, saveWalletAddresses, saveDisplayScales } from '../../src/services/storage';
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0, 2.0];
@@ -293,16 +294,17 @@ export default function Settings() {
                 btc: wallets.btc.address,
                 eth: wallets.eth.address,
                 sol: wallets.sol.address,
+                ada: wallets.ada.address,
+                doge: wallets.doge.address,
+                xrp: wallets.xrp.address,
+                dot: wallets.dot.address,
+                pol: wallets.pol.address,
               };
               setAddresses(addrs);
               await saveWalletAddresses(addrs);
             }
 
-            // Reset balances so they get re-fetched from the right network
-            setBalances({
-              BTC: 0, ETH: 0, SOL: 0,
-              USDC_SOL: 0, USDT_SOL: 0, USDC_ETH: 0, USDT_ETH: 0,
-            });
+            setBalances(ZERO_BALANCES);
 
             Alert.alert(
               'Network Changed',

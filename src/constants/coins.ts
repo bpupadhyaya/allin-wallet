@@ -4,12 +4,18 @@ export type CoinSymbol =
   | 'BTC'
   | 'ETH'
   | 'SOL'
+  | 'ADA'
+  | 'DOGE'
+  | 'XRP'
+  | 'DOT'
+  | 'LINK'
+  | 'POL'
   | 'USDC_SOL'
   | 'USDT_SOL'
   | 'USDC_ETH'
   | 'USDT_ETH';
 
-export type ChainId = 'bitcoin' | 'ethereum' | 'solana';
+export type ChainId = 'bitcoin' | 'ethereum' | 'solana' | 'cardano' | 'dogecoin' | 'xrp' | 'polkadot' | 'polygon';
 
 export interface CoinConfig {
   symbol: CoinSymbol;
@@ -121,6 +127,66 @@ export const COINS: Record<CoinSymbol, CoinConfig> = {
     testnetLifiChainId: 11155111,
     color: '#26A17B',
     icon: '₮',
+  },
+  ADA: {
+    symbol: 'ADA',
+    name: 'Cardano',
+    chain: 'cardano',
+    decimals: 6,
+    isNative: true,
+    color: '#0033AD',
+    icon: '₳',
+  },
+  DOGE: {
+    symbol: 'DOGE',
+    name: 'Dogecoin',
+    chain: 'dogecoin',
+    decimals: 8,
+    isNative: true,
+    color: '#C2A633',
+    icon: 'Ð',
+  },
+  XRP: {
+    symbol: 'XRP',
+    name: 'XRP',
+    chain: 'xrp',
+    decimals: 6,
+    isNative: true,
+    color: '#23292F',
+    icon: '✕',
+  },
+  DOT: {
+    symbol: 'DOT',
+    name: 'Polkadot',
+    chain: 'polkadot',
+    decimals: 10,
+    isNative: true,
+    color: '#E6007A',
+    icon: '●',
+  },
+  LINK: {
+    symbol: 'LINK',
+    name: 'Chainlink',
+    chain: 'ethereum',
+    decimals: 18,
+    isNative: false,
+    contractAddress: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+    testnetContractAddress: '0x779877A7B0D9E8603169DdbD7836e478b4624789',
+    lifiChainId: 1,
+    testnetLifiChainId: 11155111,
+    color: '#2A5ADA',
+    icon: '⬡',
+  },
+  POL: {
+    symbol: 'POL',
+    name: 'Polygon',
+    chain: 'polygon',
+    decimals: 18,
+    isNative: true,
+    lifiChainId: 137,
+    testnetLifiChainId: 80002, // Amoy testnet
+    color: '#8247E5',
+    icon: '⬟',
   },
 };
 
