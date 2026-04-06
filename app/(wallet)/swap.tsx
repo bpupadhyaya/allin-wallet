@@ -390,7 +390,8 @@ export default function SwapScreen() {
     }
 
     const destAddr = destinationAddress();
-    const needsDest = fromConfig.chain === 'bitcoin' || toConfig.chain === 'bitcoin';
+    const thorchainChains = new Set(['bitcoin', 'dogecoin', 'xrp']);
+    const needsDest = thorchainChains.has(fromConfig.chain) || thorchainChains.has(toConfig.chain);
     if (needsDest && !destAddr) {
       Alert.alert(
         'Address Unavailable',

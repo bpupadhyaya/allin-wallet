@@ -121,11 +121,21 @@ const DEV_ADDRESSES_MAINNET = {
   btc: 'bc1qzmtrqsfuaf6l6kkcsseumq26ukaphfj9skkug6',
   eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
   sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
+  ada: 'addr1qx0dev0placeholder0000000000000000000000000000000000000',
+  doge: 'D8mFPxYRkSJFJVxJcaRKwE1Ddev000000',
+  xrp: 'rDevPlaceholderXRP000000000000',
+  dot: '1DevPlaceholderDOT00000000000000000000000000000',
+  pol: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
 };
 const DEV_ADDRESSES_TESTNET = {
   btc: 'tb1qtk89me2ae95dmlp3yfl4q9ynpux8mxjujuf2fr',
   eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
   sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
+  ada: 'addr_test1qx0dev0placeholder00000000000000000000000000000000000',
+  doge: 'D8mFPxYRkSJFJVxJcaRKwE1Ddev000000',
+  xrp: 'rDevPlaceholderXRP000000000000',
+  dot: '1DevPlaceholderDOT00000000000000000000000000000',
+  pol: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
 };
 
 export function getDevAddresses() {
