@@ -53,6 +53,7 @@ import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { getRpc, getExplorerTxUrl } from '../../src/constants/config';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
+import { notifyTxConfirmed, notifyTxFailed } from '../../src/services/notifications';
 
 const ALL_SENDABLE: CoinSymbol[] = [
   'BTC', 'ETH', 'SOL', 'USDC_ETH', 'USDT_ETH', 'USDC_SOL', 'USDT_SOL',
@@ -342,10 +343,12 @@ export default function SendScreen() {
           .then(() => {
             updateTxStatus(ethHash, 'confirmed');
             updateTxRecord(ethHash, { status: 'confirmed' }).catch(() => {});
+            notifyTxConfirmed({ txHash: ethHash, type: 'send', chain: 'ethereum', fromCoin: coin, fromAmount: parseFloat(amount) });
           })
           .catch(() => {
             updateTxStatus(ethHash, 'failed');
             updateTxRecord(ethHash, { status: 'failed' }).catch(() => {});
+            notifyTxFailed({ txHash: ethHash, type: 'send', fromCoin: coin });
           });
       } else {
         // Solana

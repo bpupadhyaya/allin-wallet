@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppStore } from '../src/store/appStore';
 import { SESSION_TIMEOUT_MS, setTestnetMode } from '../src/constants/config';
 import { getTestnetEnabled, getDisplayScales } from '../src/services/storage';
+import { requestNotificationPermissions, notifyWalletLocked } from '../src/services/notifications';
 
 export default function RootLayout() {
   const { isAuthenticated, lock, setUseTestnet, setDisplayScales } = useAppStore();
@@ -21,6 +22,7 @@ export default function RootLayout() {
     getDisplayScales().then((scales) => {
       if (scales) setDisplayScales(scales);
     });
+    requestNotificationPermissions();
   }, []);
 
   // ── Session timeout on app background ─────────────────────────────────────
@@ -33,6 +35,7 @@ export default function RootLayout() {
           const elapsed = Date.now() - bgTimestamp.current;
           if (elapsed > SESSION_TIMEOUT_MS) {
             lock();
+            notifyWalletLocked();
             router.replace('/(auth)/unlock');
           }
         }

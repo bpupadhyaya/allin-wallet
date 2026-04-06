@@ -27,6 +27,7 @@ import { formatUsd, toUsd } from '../../src/services/prices';
 import { COINS, COIN_LIST, type CoinSymbol } from '../../src/constants/coins';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
+import { notifyTxConfirmed, notifyTxFailed } from '../../src/services/notifications';
 
 // ─── Slippage options ─────────────────────────────────────────────────────────
 
@@ -442,10 +443,19 @@ export default function SwapScreen() {
               const res = await executeSwap(
                 quote,
                 senderAddr,
-                // Background callback for ETH tx confirmation
+                // Background callback for ETH/POL tx confirmation
                 async (txHash, status) => {
                   updateTxStatus(txHash, status);
                   await updateTxRecord(txHash, { status });
+                  // Push notification
+                  if (status === 'confirmed') {
+                    notifyTxConfirmed({
+                      txHash, type: 'swap', chain: fromConfig.chain,
+                      fromCoin, toCoin, fromAmount: quote.fromAmount, toAmount: quote.toAmount,
+                    });
+                  } else {
+                    notifyTxFailed({ txHash, type: 'swap', fromCoin });
+                  }
                 },
               );
 
