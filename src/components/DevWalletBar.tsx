@@ -1,17 +1,16 @@
 /**
- * DevWalletBar — one-tap wallet creation + quick PIN login for testing.
+ * PracticeWalletBar — Production feature for test/practice wallets.
  *
- * Uses 100% production code paths:
- *   - Creation: deriveWalletsFromMnemonic → saveCredentials → savePin → saveMnemonic
- *   - Login: verifyPin (real bcrypt) or authenticateWithBiometrics
- *   - Persistence: same secure store + AsyncStorage as production
+ * Allows users to practice all wallet features (send, receive, swap, etc.)
+ * using pre-configured test wallets with simulated balances before creating
+ * their own real wallet. Also serves as a verification tool — users can
+ * inspect every functionality of the app in a risk-free environment.
  *
- * The ONLY non-production behavior: mock balances set after creation.
- *
- * ⚠️  REMOVE BEFORE PRODUCTION RELEASE  ⚠️
+ * Wallets are persistent, use real encryption, and follow the same code
+ * paths as production wallets.
  */
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { DEV_WALLETS, DEV_MOCK_BALANCES, type DevWalletConfig } from '../constants/devWallets';
 import { deriveWalletsFromMnemonic } from '../crypto/wallets';
@@ -22,84 +21,75 @@ import {
   saveWalletType,
   saveWalletAddresses,
   saveMnemonic,
-  getUsername,
   getWalletAddresses,
-  verifyPin,
 } from '../services/storage';
 import { loadTxHistory } from '../services/txHistory';
-import { isBiometricAvailable, authenticateWithBiometrics } from '../services/biometric';
+import {
+  cacheDevWallet,
+  loadCachedDevWallet,
+  getCreatedDevWalletIds,
+  restoreCachedWallet,
+  trackLogin,
+  trackSwitch,
+  arePracticeWalletsHidden,
+} from '../services/devWalletCache';
+import * as SecureStore from 'expo-secure-store';
 import { useAppStore } from '../store/appStore';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_WEIGHT, FONT_SIZE } from '../constants/theme';
 
 export function DevWalletBar() {
   const [loading, setLoading] = useState<string | null>(null);
   const [status, setStatus] = useState('');
-  const [currentWalletId, setCurrentWalletId] = useState<string | null>(null);
+  const [createdIds, setCreatedIds] = useState<string[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const { setAddresses, setHasWallet, setAuthenticated, setBalances, setRecentTxs } = useAppStore();
 
-  // Detect which dev wallet is currently persisted
   useEffect(() => {
-    getUsername().then((savedUser) => {
-      if (savedUser) {
-        const match = DEV_WALLETS.find((w) => w.username === savedUser);
-        if (match) setCurrentWalletId(match.id);
+    getCreatedDevWalletIds().then(setCreatedIds);
+    arePracticeWalletsHidden().then(setHidden);
+    SecureStore.getItemAsync('wallet_username_v1').then((user) => {
+      if (user) {
+        const match = DEV_WALLETS.find((w) => w.username === user);
+        if (match) setActiveId(match.id);
       }
     });
   }, []);
 
-  // ── Login to existing wallet (production flow + biometric/PIN) ──────────
-  async function loginExisting(config: DevWalletConfig) {
-    if (loading) return;
-    setLoading(config.id);
-    setStatus('Checking biometrics…');
-    try {
-      await new Promise((r) => setTimeout(r, 50));
+  if (hidden) return null;
 
-      // Try biometric (same as production unlock)
-      const bioAvailable = await isBiometricAvailable();
-      if (bioAvailable) {
-        setStatus('Tap fingerprint to unlock…');
-        const ok = await authenticateWithBiometrics('Unlock AllIn Wallet');
-        if (ok) {
-          await loadAndNavigate(config.username);
-          return;
-        }
-        // Biometric declined — fall through to PIN
-      }
-
-      // PIN verification (same bcrypt.compare as production)
-      setStatus('Verifying PIN…');
+  async function switchToWallet(config: DevWalletConfig) {
+    const cached = await loadCachedDevWallet(config.id);
+    if (cached) {
+      setLoading(config.id);
+      setStatus('Restoring practice wallet…');
       await new Promise((r) => setTimeout(r, 50));
-      const pinOk = await verifyPin(config.pin);
-      if (!pinOk) {
-        throw new Error('PIN verification failed. The wallet may have been modified. Delete from Settings and re-create.');
+      await restoreCachedWallet(cached);
+      if (activeId && activeId !== config.id) {
+        await trackSwitch(config.id);
       }
-      await loadAndNavigate(config.username);
-    } catch (e) {
+      await trackLogin(config.id);
+      setStatus('Loading dashboard…');
+      const [addresses, history] = await Promise.all([
+        getWalletAddresses(),
+        loadTxHistory(),
+      ]);
+      if (addresses) setAddresses(addresses);
+      setRecentTxs(history);
+      setHasWallet(true, 'seed');
+      setBalances(DEV_MOCK_BALANCES);
+      setAuthenticated(true, config.username);
+      setActiveId(config.id);
       setLoading(null);
       setStatus('');
-      Alert.alert('Login Failed', e instanceof Error ? e.message : String(e));
+      router.replace('/(wallet)/dashboard');
+    } else {
+      await createWallet(config);
     }
   }
 
-  // Same post-auth flow as production loginSuccess()
-  async function loadAndNavigate(username: string) {
-    const [addresses, history] = await Promise.all([
-      getWalletAddresses(),
-      loadTxHistory(),
-    ]);
-    if (addresses) setAddresses(addresses);
-    setRecentTxs(history);
-    setBalances(DEV_MOCK_BALANCES); // Only non-production line: seed mock balances
-    setAuthenticated(true, username);
-    setLoading(null);
-    setStatus('');
-    router.replace('/(wallet)/dashboard');
-  }
-
-  // ── Create new wallet (100% production code path) ─────────────────────
   async function createWallet(config: DevWalletConfig) {
-    if (loading) return;
     setLoading(config.id);
     try {
       setStatus('Validating seed phrase…');
@@ -108,7 +98,6 @@ export function DevWalletBar() {
         throw new Error(`Invalid mnemonic for ${config.id}`);
       }
 
-      // Production: deriveWalletsFromMnemonic
       setStatus('Deriving wallet addresses (8 chains)…');
       await new Promise((r) => setTimeout(r, 50));
       const derived = await deriveWalletsFromMnemonic(config.mnemonic);
@@ -123,17 +112,14 @@ export function DevWalletBar() {
         pol: derived.pol.address,
       };
 
-      // Production: saveCredentials (bcrypt 12 rounds)
       setStatus('Encrypting password (bcrypt 12 rounds)…');
       await new Promise((r) => setTimeout(r, 50));
       await saveCredentials(config.username, config.password);
 
-      // Production: savePin (bcrypt 10 rounds)
       setStatus('Encrypting PIN (bcrypt 10 rounds)…');
       await new Promise((r) => setTimeout(r, 50));
       await savePin(config.pin);
 
-      // Production: save mnemonic + wallet type + addresses
       setStatus('Saving to secure storage…');
       await new Promise((r) => setTimeout(r, 50));
       await Promise.all([
@@ -142,12 +128,28 @@ export function DevWalletBar() {
         saveWalletAddresses(addresses),
       ]);
 
-      // Production: update store + navigate
+      const [pwHash, pinHash] = await Promise.all([
+        SecureStore.getItemAsync('wallet_pw_hash_v1'),
+        SecureStore.getItemAsync('wallet_pin_hash_v1'),
+      ]);
+      await cacheDevWallet({
+        id: config.id,
+        username: config.username,
+        mnemonic: config.mnemonic,
+        passwordHash: pwHash!,
+        pinHash: pinHash!,
+        walletType: 'seed',
+        addresses,
+      });
+      await trackLogin(config.id);
+      setCreatedIds((prev) => prev.includes(config.id) ? prev : [...prev, config.id]);
+
+      setStatus('Loading dashboard…');
       setAddresses(addresses);
       setHasWallet(true, 'seed');
-      setBalances(DEV_MOCK_BALANCES); // Only non-production line
+      setBalances(DEV_MOCK_BALANCES);
       setAuthenticated(true, config.username);
-      setCurrentWalletId(config.id);
+      setActiveId(config.id);
 
       setLoading(null);
       setStatus('');
@@ -159,34 +161,15 @@ export function DevWalletBar() {
     }
   }
 
-  function handleTap(config: DevWalletConfig) {
-    if (currentWalletId === config.id) {
-      // Same wallet persisted — login via production auth
-      loginExisting(config);
-    } else if (currentWalletId) {
-      // Different wallet — confirm switch
-      Alert.alert(
-        'Switch Wallet?',
-        `Currently using ${currentWalletId}. Switch to ${config.id}? This replaces the current wallet.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Switch', onPress: () => createWallet(config) },
-        ],
-      );
-    } else {
-      // No wallet — create
-      createWallet(config);
-    }
-  }
-
   return (
     <>
+      {/* Status modal */}
       <Modal visible={loading !== null} transparent animationType="fade">
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
             <ActivityIndicator size="large" color={COLORS.primary} />
             <Text style={modalStyles.walletId}>
-              {currentWalletId === loading ? `Unlocking ${loading}…` : `Creating ${loading}…`}
+              {createdIds.includes(loading ?? '') ? `Switching to ${loading}…` : `Creating ${loading}…`}
             </Text>
             <Text style={modalStyles.status}>{status}</Text>
           </View>
@@ -194,22 +177,99 @@ export function DevWalletBar() {
       </Modal>
 
       <View style={styles.container}>
-        <Text style={styles.label}>Dev:</Text>
+        {/* Header */}
+        <Text style={styles.title}>Test / Practice Wallets</Text>
+        <Text style={styles.subtitle}>
+          Practice every feature risk-free before creating your real wallet.
+          These use real encryption and the same code as production wallets — the only
+          difference is simulated token balances.
+        </Text>
+
+        {/* Collapsible instructions */}
+        <TouchableOpacity
+          style={styles.instructionsToggle}
+          onPress={() => setShowInstructions(!showInstructions)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.instructionsToggleText}>
+            {showInstructions ? '▾ Instructions' : '▸ Instructions'}
+          </Text>
+        </TouchableOpacity>
+
+        {showInstructions && (
+          <View style={styles.instructionsBox}>
+            <Text style={styles.instructionTitle}>What happens when you tap a wallet?</Text>
+            <Text style={styles.instructionText}>
+              {'• First tap creates the wallet using the same process as a real wallet — seed phrase derivation, password encryption (bcrypt 12 rounds), PIN encryption (bcrypt 10 rounds), and secure storage.\n'}
+              {'• Subsequent taps restore the wallet instantly from cache.\n'}
+              {'• You can switch between wallets freely — all are persistent.'}
+            </Text>
+
+            <Text style={styles.instructionTitle}>How are they different from real wallets?</Text>
+            <Text style={styles.instructionText}>
+              {'• They use pre-set seed phrases (publicly known test vectors) — never use them for real funds.\n'}
+              {'• Token balances are simulated for testing swaps, sends, and receives.\n'}
+              {'• Everything else is identical: encryption, storage, transaction signing, and UI flows.'}
+            </Text>
+
+            <Text style={styles.instructionTitle}>How should you use them?</Text>
+            <Text style={styles.instructionText}>
+              {'• Try sending tokens between wallets to verify the send flow.\n'}
+              {'• Practice swapping tokens (SOL ↔ USDC, ETH ↔ BTC, etc.).\n'}
+              {'• Test receiving by copying addresses and verifying QR codes.\n'}
+              {'• Lock the app and unlock with PIN, password, or biometrics.\n'}
+              {'• Switch between wallets to verify multi-wallet workflows.\n'}
+              {'• Explore every screen and feature to build confidence.'}
+            </Text>
+
+            <Text style={styles.instructionTitle}>You are in charge</Text>
+            <Text style={styles.instructionText}>
+              AllIn Wallet is free and open source. Every line of code is available for
+              inspection. These practice wallets let you verify every functionality
+              without risk — no real funds, no real transactions on the blockchain.
+              Once you are confident, create your real wallet through the secure
+              onboarding process.
+            </Text>
+          </View>
+        )}
+
+        {/* Wallet buttons */}
         <View style={styles.row}>
-          {DEV_WALLETS.map((w) => (
-            <TouchableOpacity
-              key={w.id}
-              style={[styles.btn, currentWalletId === w.id && styles.btnCurrent]}
-              onPress={() => handleTap(w)}
-              activeOpacity={0.6}
-              disabled={loading !== null}
-            >
-              <Text style={[styles.btnText, currentWalletId === w.id && styles.btnTextCurrent]}>
-                {w.id}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {DEV_WALLETS.map((w) => {
+            const isActive = activeId === w.id;
+            const isCreated = createdIds.includes(w.id);
+            return (
+              <TouchableOpacity
+                key={w.id}
+                style={[
+                  styles.btn,
+                  isActive && styles.btnActive,
+                  isCreated && !isActive && styles.btnCreated,
+                ]}
+                onPress={() => switchToWallet(w)}
+                activeOpacity={0.6}
+                disabled={loading !== null}
+              >
+                <Text style={[
+                  styles.btnText,
+                  isActive && styles.btnTextActive,
+                  isCreated && !isActive && styles.btnTextCreated,
+                ]}>
+                  {w.id.toUpperCase()}
+                </Text>
+                {isCreated && (
+                  <Text style={styles.btnSub}>{w.username}</Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
+
+        {createdIds.length > 0 && (
+          <Text style={styles.hint}>
+            {activeId ? `Active: ${activeId.toUpperCase()}` : 'Tap to open'} · {createdIds.length} created
+          </Text>
+        )}
       </View>
     </>
   );
@@ -241,26 +301,84 @@ const modalStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.bgCard,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.warning + '44',
-    padding: SPACING.sm,
-    gap: 4,
+    borderColor: COLORS.secondary + '44',
+    padding: SPACING.md,
+    gap: SPACING.sm,
   },
-  label: { color: COLORS.warning, fontSize: 10, fontWeight: FONT_WEIGHT.heavy, letterSpacing: 1 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  title: {
+    color: COLORS.secondary,
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.heavy,
+  },
+  subtitle: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    lineHeight: 18,
+  },
+  instructionsToggle: { paddingVertical: 2 },
+  instructionsToggleText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
+  },
+  instructionsBox: {
+    backgroundColor: COLORS.bg,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  instructionTitle: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.heavy,
+    marginTop: 4,
+  },
+  instructionText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   btn: {
-    backgroundColor: COLORS.warning + '18',
-    borderRadius: BORDER_RADIUS.sm,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    minWidth: 32,
+    backgroundColor: COLORS.secondary + '15',
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    minWidth: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.warning + '55',
+    borderWidth: 1.5,
+    borderColor: COLORS.secondary + '44',
+    gap: 2,
   },
-  btnCurrent: { backgroundColor: COLORS.warning + '33', borderColor: COLORS.warning },
-  btnText: { color: COLORS.warning, fontSize: 10, fontWeight: FONT_WEIGHT.bold },
-  btnTextCurrent: { fontWeight: FONT_WEIGHT.heavy },
+  btnActive: {
+    backgroundColor: COLORS.secondary + '30',
+    borderColor: COLORS.secondary,
+  },
+  btnCreated: {
+    borderColor: COLORS.secondary + '77',
+  },
+  btnText: {
+    color: COLORS.secondary,
+    fontSize: 13,
+    fontWeight: FONT_WEIGHT.heavy,
+    opacity: 0.6,
+  },
+  btnTextActive: { opacity: 1 },
+  btnTextCreated: { opacity: 0.9 },
+  btnSub: {
+    color: COLORS.textMuted,
+    fontSize: 8,
+  },
+  hint: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+  },
 });

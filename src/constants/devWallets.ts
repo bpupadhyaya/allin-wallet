@@ -1,12 +1,14 @@
 /**
- * DEV TESTING WALLETS
- * -------------------
- * 10 pre-configured wallet configs for rapid testing WITHOUT a dev server.
- * Each uses a real BIP-39 mnemonic, real bcrypt hashing, real secure storage.
- * The only shortcut is skipping the manual onboarding UI — the security is identical.
+ * Practice / Test Wallets
+ * -----------------------
+ * 10 pre-configured wallet configs that let users practice all wallet features
+ * (send, receive, swap, etc.) before creating their real wallet. Each uses a
+ * real BIP-39 mnemonic, real bcrypt hashing, and real secure storage — the only
+ * difference from a production wallet is simulated token balances.
  *
- * ⚠️  REMOVE THIS FILE BEFORE PRODUCTION RELEASE  ⚠️
- * Also remove the <DevWalletBar /> from login.tsx and unlock.tsx.
+ * These are a PRODUCTION FEATURE — they help users build confidence and verify
+ * app functionality in a risk-free environment. Developers also use them for
+ * testing without needing a dev server attached.
  */
 
 export interface DevWalletConfig {

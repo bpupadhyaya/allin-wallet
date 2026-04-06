@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="463fbcb2-dbca-48e0-8ddc-499c84b8c9dd" name="Changes" comment="" />
+    <list default="true" id="463fbcb2-dbca-48e0-8ddc-499c84b8c9dd" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/app/(wallet)/settings.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(wallet)/settings.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DevWalletBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DevWalletBar.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -10,16 +13,16 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "bpupadhyaya"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;bpupadhyaya&quot;
   }
-}]]></component>
+}</component>
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
     "url": "git@github.com:bpupadhyaya/allin-wallet.git",
-    "accountId": "f16fc35d-492f-4a12-b8a1-61b626719c8a"
+    "accountId": "f20122b0-d4c2-4c8a-ae7d-3fc07d603eec"
   }
 }]]></component>
   <component name="ProjectColorInfo">{
@@ -45,7 +48,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.32098.37" />
       </set>
     </attachedChunks>
   </component>

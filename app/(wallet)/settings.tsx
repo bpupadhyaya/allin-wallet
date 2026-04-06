@@ -25,8 +25,19 @@ import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/co
 import { saveTestnetEnabled } from '../../src/services/storage';
 import { deriveWalletsFromMnemonic } from '../../src/crypto/wallets';
 import { ZERO_BALANCES } from '../../src/services/balance';
-import { getMnemonic, saveWalletAddresses, saveDisplayScales, getUsername } from '../../src/services/storage';
-import { DEV_WALLETS } from '../../src/constants/devWallets';
+import { getMnemonic, saveWalletAddresses, saveDisplayScales, getUsername, getWalletAddresses } from '../../src/services/storage';
+import { DEV_WALLETS, DEV_MOCK_BALANCES } from '../../src/constants/devWallets';
+import {
+  loadCachedDevWallet,
+  restoreCachedWallet,
+  getCreatedDevWalletIds,
+  clearAllDevWalletCaches,
+  getUsage,
+  canHidePracticeWallets,
+  setPracticeWalletsHidden,
+  arePracticeWalletsHidden,
+  type PracticeUsage,
+} from '../../src/services/devWalletCache';
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0, 2.0];
 
@@ -82,6 +93,174 @@ function ScaleSliderRow({
         <Text style={styles.sliderLabelText}>50%</Text>
         <Text style={styles.sliderLabelText}>100%</Text>
         <Text style={styles.sliderLabelText}>250%</Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Practice Wallet Settings ──────────────────────────────────────────────
+function DevWalletSwitcher({ username }: { username: string | null }) {
+  const [createdIds, setCreatedIds] = useState<string[]>([]);
+  const [switching, setSwitching] = useState<string | null>(null);
+  const [usage, setUsage] = useState<PracticeUsage | null>(null);
+  const [canHide, setCanHide] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const { setAddresses, setHasWallet, setAuthenticated, setBalances, setRecentTxs, logout } = useAppStore();
+
+  const currentWallet = DEV_WALLETS.find((w) => w.username === username);
+
+  useEffect(() => {
+    getCreatedDevWalletIds().then(setCreatedIds);
+    getUsage().then(setUsage);
+    canHidePracticeWallets().then(setCanHide);
+    arePracticeWalletsHidden().then(setIsHidden);
+  }, []);
+
+  async function handleSwitch(config: typeof DEV_WALLETS[0]) {
+    if (currentWallet && config.id === currentWallet.id) return;
+    setSwitching(config.id);
+    try {
+      const cached = await loadCachedDevWallet(config.id);
+      if (!cached) {
+        Alert.alert('Not Created', `${config.id.toUpperCase()} hasn't been created yet. Tap it on the sign-in screen first.`);
+        setSwitching(null);
+        return;
+      }
+      await restoreCachedWallet(cached);
+      const [addresses, history] = await Promise.all([
+        getWalletAddresses(),
+        loadTxHistory(),
+      ]);
+      if (addresses) setAddresses(addresses);
+      setRecentTxs(history);
+      setHasWallet(true, 'seed');
+      setBalances(DEV_MOCK_BALANCES);
+      setAuthenticated(true, config.username);
+      setSwitching(null);
+      router.replace('/(wallet)/dashboard');
+    } catch (e) {
+      setSwitching(null);
+      Alert.alert('Switch Failed', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleToggleHide(newValue: boolean) {
+    if (newValue && !canHide) {
+      const missing: string[] = [];
+      if (usage && usage.walletsCreated.length < 3) missing.push(`Create ${3 - usage.walletsCreated.length} more practice wallet(s)`);
+      if (usage && usage.walletsLoggedIn.length < 3) missing.push(`Log into ${3 - usage.walletsLoggedIn.length} more wallet(s)`);
+      if (usage && usage.walletsSwitched.length < 2) missing.push('Switch between wallets more');
+      if (usage && usage.walletsTransacted.length < 1) missing.push('Complete at least 1 transaction');
+      Alert.alert(
+        'Complete Training First',
+        'To disable practice wallets, you need more experience:\n\n' + missing.map((m) => '• ' + m).join('\n'),
+      );
+      return;
+    }
+    await setPracticeWalletsHidden(newValue);
+    setIsHidden(newValue);
+  }
+
+  async function handleDeleteAll() {
+    Alert.alert(
+      'Delete All Practice Wallets?',
+      'This removes all cached practice wallets and signs you out. You can re-create them anytime.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete All',
+          style: 'destructive',
+          onPress: async () => {
+            await clearAllDevWalletCaches();
+            await clearAllData();
+            await clearTxHistory();
+            logout();
+            router.replace('/(auth)/onboarding');
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <View style={styles.section}>
+      <SectionLabel label="Practice Wallets" />
+      <View style={styles.card}>
+        {currentWallet && (
+          <>
+            <SettingRow
+              icon="🧪"
+              label={`Active: ${currentWallet.id.toUpperCase()} (${currentWallet.username})`}
+              sub="Tap another wallet below to switch instantly"
+            />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: SPACING.md, paddingTop: 0 }}>
+              {DEV_WALLETS.map((w) => {
+                const isActive = currentWallet && w.id === currentWallet.id;
+                const isCreated = createdIds.includes(w.id);
+                return (
+                  <TouchableOpacity
+                    key={w.id}
+                    style={{
+                      backgroundColor: isActive ? COLORS.secondary + '33' : isCreated ? COLORS.secondary + '18' : COLORS.bg,
+                      borderRadius: 8,
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderWidth: 1.5,
+                      borderColor: isActive ? COLORS.secondary : isCreated ? COLORS.secondary + '55' : COLORS.border,
+                      opacity: switching ? 0.5 : 1,
+                    }}
+                    onPress={() => handleSwitch(w)}
+                    disabled={isActive || switching !== null}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={{
+                      color: isActive ? COLORS.secondary : isCreated ? COLORS.secondary : COLORS.textMuted,
+                      fontSize: 12,
+                      fontWeight: isActive ? FONT_WEIGHT.heavy : FONT_WEIGHT.bold,
+                    }}>
+                      {switching === w.id ? '…' : w.id.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        <SettingRow
+          icon={isHidden ? '👁' : '🙈'}
+          label={isHidden ? 'Show Practice Wallets on Sign-in' : 'Hide Practice Wallets from Sign-in'}
+          sub={canHide
+            ? 'You have completed the training requirements.'
+            : 'Complete training with practice wallets first (create 3+, switch, transact).'}
+          onPress={() => handleToggleHide(!isHidden)}
+        />
+
+        {usage && (
+          <View style={{ padding: SPACING.md, paddingTop: 0, gap: 2 }}>
+            <Text style={{ color: COLORS.textMuted, fontSize: 10, fontWeight: FONT_WEIGHT.bold }}>Training progress:</Text>
+            <Text style={{ color: usage.walletsCreated.length >= 3 ? COLORS.success : COLORS.textMuted, fontSize: 10 }}>
+              {usage.walletsCreated.length >= 3 ? '✓' : '○'} Created: {usage.walletsCreated.length}/3
+            </Text>
+            <Text style={{ color: usage.walletsLoggedIn.length >= 3 ? COLORS.success : COLORS.textMuted, fontSize: 10 }}>
+              {usage.walletsLoggedIn.length >= 3 ? '✓' : '○'} Logged in: {usage.walletsLoggedIn.length}/3
+            </Text>
+            <Text style={{ color: usage.walletsSwitched.length >= 2 ? COLORS.success : COLORS.textMuted, fontSize: 10 }}>
+              {usage.walletsSwitched.length >= 2 ? '✓' : '○'} Switched: {usage.walletsSwitched.length}/2
+            </Text>
+            <Text style={{ color: usage.walletsTransacted.length >= 1 ? COLORS.success : COLORS.textMuted, fontSize: 10 }}>
+              {usage.walletsTransacted.length >= 1 ? '✓' : '○'} Transacted: {usage.walletsTransacted.length}/1
+            </Text>
+          </View>
+        )}
+
+        <SettingRow
+          icon="🗑"
+          label="Delete All Practice Wallets"
+          sub="Clears all cached practice wallets and signs out"
+          onPress={handleDeleteAll}
+          danger
+        />
       </View>
     </View>
   );
@@ -516,47 +695,7 @@ export default function Settings() {
         )}
 
         {/* Dev Testing — ⚠️ REMOVE BEFORE PRODUCTION RELEASE */}
-        {(() => {
-          const match = DEV_WALLETS.find((w) => w.username === username);
-          if (!match) return null;
-          return (
-            <View style={styles.section}>
-              <SectionLabel label="Dev Testing" />
-              <View style={styles.card}>
-                <SettingRow
-                  icon="🧪"
-                  label={`Active dev wallet: ${match.id} (${match.username})`}
-                  sub="This is a test wallet. Delete it to switch to a different dev wallet or create a production wallet."
-                />
-                <SettingRow
-                  icon="🗑"
-                  label="Delete Dev Wallet"
-                  sub="Removes this dev wallet so you can create or switch to another."
-                  onPress={() => {
-                    Alert.alert(
-                      'Delete Dev Wallet?',
-                      `This will remove ${match.id} (${match.username}). You can re-create it from the sign-in screen.`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Delete',
-                          style: 'destructive',
-                          onPress: async () => {
-                            await clearAllData();
-                            await clearTxHistory();
-                            logout();
-                            router.replace('/(auth)/onboarding');
-                          },
-                        },
-                      ],
-                    );
-                  }}
-                  danger
-                />
-              </View>
-            </View>
-          );
-        })()}
+        <DevWalletSwitcher username={username} />
 
         {/* Danger zone */}
         <View style={styles.section}>
