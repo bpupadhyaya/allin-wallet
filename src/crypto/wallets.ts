@@ -12,6 +12,11 @@ import { mnemonicToSeed } from './mnemonic';
 import { isTestnet } from '../constants/config';
 import { createHmac } from 'crypto';
 
+/** Zero-fill a Buffer or Uint8Array to prevent sensitive data lingering in memory. */
+function wipe(buf: Uint8Array | Buffer): void {
+  buf.fill(0);
+}
+
 export interface DerivedWallets {
   btc: { address: string; publicKey: string };
   eth: { address: string; publicKey: string };
@@ -170,8 +175,10 @@ export async function deriveWalletsFromMnemonic(
 
   // ── Ethereum ─────────────���──────────────────────────────��───────────────
   const ethKey = root.derive(PATHS.ETH);
-  const ethPriv = '0x' + Buffer.from(ethKey.privateKey!).toString('hex');
+  const ethPrivBytes = Buffer.from(ethKey.privateKey!);
+  const ethPriv = '0x' + ethPrivBytes.toString('hex');
   const ethWallet = new ethers.Wallet(ethPriv);
+  wipe(ethPrivBytes);
 
   // ── Solana (ed25519 via slip10 derivation) ──────────────────────────────
   const solKey = root.derive(PATHS.SOL);
@@ -196,6 +203,9 @@ export async function deriveWalletsFromMnemonic(
   // ── Polygon (EVM, same derivation as ETH) ────────────────────────────
   // POL uses the same address as ETH since it's EVM-compatible
   const polAddress = ethWallet.address;
+
+  // Wipe the master seed now that all derivations are done
+  wipe(seed);
 
   return {
     btc: {
@@ -241,9 +251,13 @@ export async function getEthSigner(
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const ethKey = root.derive(PATHS.ETH);
-  const priv = '0x' + Buffer.from(ethKey.privateKey!).toString('hex');
+  const privBytes = Buffer.from(ethKey.privateKey!);
+  const priv = '0x' + privBytes.toString('hex');
   const provider = new ethers.JsonRpcProvider(rpcUrl);
-  return new ethers.Wallet(priv, provider);
+  const wallet = new ethers.Wallet(priv, provider);
+  wipe(privBytes);
+  wipe(seed);
+  return wallet;
 }
 
 /** Derives Solana Keypair — only called when signing a transaction. */
@@ -251,7 +265,9 @@ export async function getSolKeypair(mnemonic: string): Promise<Keypair> {
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const solKey = root.derive(PATHS.SOL);
-  return Keypair.fromSeed(solKey.privateKey!.slice(0, 32));
+  const keypair = Keypair.fromSeed(solKey.privateKey!.slice(0, 32));
+  wipe(seed);
+  return keypair;
 }
 
 /** Derives BTC private key — only called when signing a transaction. */
@@ -259,7 +275,9 @@ export async function getBtcPrivateKey(mnemonic: string): Promise<Uint8Array> {
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const btcKey = root.derive(getBtcPath());
-  return btcKey.privateKey!;
+  const privKey = Uint8Array.from(btcKey.privateKey!);
+  wipe(seed);
+  return privKey;
 }
 
 /**
@@ -273,10 +291,12 @@ export async function getBtcKeyPair(
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const btcKey = root.derive(getBtcPath());
-  return {
-    privateKey: btcKey.privateKey!,
-    publicKey: btcKey.publicKey!, // compressed 33-byte secp256k1 key
+  const result = {
+    privateKey: Uint8Array.from(btcKey.privateKey!),
+    publicKey: Uint8Array.from(btcKey.publicKey!),
   };
+  wipe(seed);
+  return result;
 }
 
 /**
@@ -303,7 +323,12 @@ export async function getDogeKeyPair(
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const dogeKey = root.derive(PATHS.DOGE);
-  return { privateKey: dogeKey.privateKey!, publicKey: dogeKey.publicKey! };
+  const result = {
+    privateKey: Uint8Array.from(dogeKey.privateKey!),
+    publicKey: Uint8Array.from(dogeKey.publicKey!),
+  };
+  wipe(seed);
+  return result;
 }
 
 export function getDogeNetwork() {
@@ -317,7 +342,12 @@ export async function getXrpKeyPair(
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const xrpKey = root.derive(PATHS.XRP);
-  return { privateKey: xrpKey.privateKey!, publicKey: xrpKey.publicKey! };
+  const result = {
+    privateKey: Uint8Array.from(xrpKey.privateKey!),
+    publicKey: Uint8Array.from(xrpKey.publicKey!),
+  };
+  wipe(seed);
+  return result;
 }
 
 /** Derives Polygon signer (same as ETH, different RPC). */
@@ -328,7 +358,11 @@ export async function getPolSigner(
   const seed = await mnemonicToSeed(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const key = root.derive(PATHS.POL);
-  const priv = '0x' + Buffer.from(key.privateKey!).toString('hex');
+  const privBytes = Buffer.from(key.privateKey!);
+  const priv = '0x' + privBytes.toString('hex');
   const provider = new ethers.JsonRpcProvider(rpcUrl);
-  return new ethers.Wallet(priv, provider);
+  const wallet = new ethers.Wallet(priv, provider);
+  wipe(privBytes);
+  wipe(seed);
+  return wallet;
 }

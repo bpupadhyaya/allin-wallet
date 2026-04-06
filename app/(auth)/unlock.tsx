@@ -43,6 +43,7 @@ export default function UnlockScreen() {
   const [bioLabel, setBioLabel] = useState('Biometrics');
   const [bioAvailable, setBioAvailable] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutCount, setLockoutCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
 
   useEffect(() => {
@@ -83,7 +84,10 @@ export default function UnlockScreen() {
     const next = failedAttempts + 1;
     setFailedAttempts(next);
     if (next >= 5) {
-      setLockedUntil(Date.now() + 30_000);
+      const nextLockout = lockoutCount + 1;
+      const lockoutMs = Math.min(60_000 * Math.pow(2, nextLockout - 1), 30 * 60_000);
+      setLockedUntil(Date.now() + lockoutMs);
+      setLockoutCount(nextLockout);
       setFailedAttempts(0);
     }
   }

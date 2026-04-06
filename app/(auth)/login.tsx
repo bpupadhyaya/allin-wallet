@@ -52,6 +52,7 @@ export default function LoginScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricLabel, setBiometricLabel] = useState('Biometrics');
   const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutCount, setLockoutCount] = useState(0); // how many times we've hit the threshold
   const [lockedUntil, setLockedUntil] = useState(0);
 
   useEffect(() => {
@@ -93,7 +94,11 @@ export default function LoginScreen() {
     const next = failedAttempts + 1;
     setFailedAttempts(next);
     if (next >= 5) {
-      setLockedUntil(Date.now() + 30_000); // 30s lockout
+      // Exponential backoff: 60s, 120s, 240s, 480s... capped at 30 min
+      const nextLockout = lockoutCount + 1;
+      const lockoutMs = Math.min(60_000 * Math.pow(2, nextLockout - 1), 30 * 60_000);
+      setLockedUntil(Date.now() + lockoutMs);
+      setLockoutCount(nextLockout);
       setFailedAttempts(0);
     }
   }

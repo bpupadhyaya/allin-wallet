@@ -39,7 +39,7 @@ class WalletConnectService {
   async init(ethAddress: string): Promise<void> {
     if (this.wallet) return; // Already initialized
     if (!WC_PROJECT_ID) {
-      console.warn('[WC] No WC_PROJECT_ID set. WalletConnect disabled.');
+      if (__DEV__) console.warn('[WC] No WC_PROJECT_ID set. WalletConnect disabled.');
       return;
     }
 
@@ -111,7 +111,7 @@ class WalletConnectService {
         };
         this.onSessionApprove?.(wcSession);
       } catch (e) {
-        console.error('[WC] session_proposal error', e);
+        if (__DEV__) console.error('[WC] session_proposal error', e);
       }
     });
 

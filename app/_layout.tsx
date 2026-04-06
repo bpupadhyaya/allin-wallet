@@ -8,9 +8,10 @@ import { useAppStore } from '../src/store/appStore';
 import { SESSION_TIMEOUT_MS, setTestnetMode } from '../src/constants/config';
 import { getTestnetEnabled, getDisplayScales } from '../src/services/storage';
 import { requestNotificationPermissions, notifyWalletLocked } from '../src/services/notifications';
+import { recheckPendingTransactions } from '../src/services/swap/executor';
 
 export default function RootLayout() {
-  const { isAuthenticated, lock, setUseTestnet, setDisplayScales } = useAppStore();
+  const { isAuthenticated, lock, setUseTestnet, setDisplayScales, updateTxStatus } = useAppStore();
   const bgTimestamp = useRef<number | null>(null);
 
   // ── Load testnet preference on startup ──────────────────────────────────
@@ -37,6 +38,11 @@ export default function RootLayout() {
             lock();
             notifyWalletLocked();
             router.replace('/(auth)/unlock');
+          } else {
+            // Re-check any pending transactions that may have confirmed while backgrounded
+            recheckPendingTransactions((txHash, status) => {
+              updateTxStatus(txHash, status);
+            });
           }
         }
         bgTimestamp.current = null;

@@ -23,13 +23,46 @@ import { getEthSigner, getSolKeypair, getBtcKeyPair, getBtcNetwork, getDogeKeyPa
 import { fetchBtcFeeRates, estimateBtcVbytes } from '../fees';
 import { getRpc, getExplorerTxUrl, IS_DEV, DEV_MNEMONIC } from '../../constants/config';
 import { COINS } from '../../constants/coins';
+import { loadTxHistory, updateTxRecord } from '../txHistory';
 import type { SwapQuote } from './router';
 
 // Known Li.Fi diamond proxy contracts — https://docs.li.fi/smart-contracts/deployments
-const LIFI_APPROVED_SPENDERS: ReadonlySet<string> = new Set([
+// Fetched dynamically at runtime; falls back to these known-good addresses.
+const LIFI_HARDCODED_SPENDERS: readonly string[] = [
   '0x1231deb6f5749ef6ce6943a275a1d3e7486f4eae', // LiFi Diamond (primary)
   '0x341e94069f53234fe6dabef707ad424830525715', // LiFi Diamond Immutable
-].map(a => a.toLowerCase()));
+];
+let lifiApprovedSpenders: ReadonlySet<string> = new Set(
+  LIFI_HARDCODED_SPENDERS.map(a => a.toLowerCase()),
+);
+
+/** Refresh Li.Fi approved spenders from their API (best-effort). */
+async function refreshLifiSpenders(): Promise<void> {
+  try {
+    const { data } = await axios.get<{ address?: string }[]>(
+      'https://li.quest/v1/tools',
+      { timeout: 5000 },
+    );
+    const addresses: string[] = [];
+    if (Array.isArray(data)) {
+      for (const tool of data) {
+        if (tool.address) addresses.push(tool.address.toLowerCase());
+      }
+    }
+    if (addresses.length > 0) {
+      // Merge with hardcoded to ensure we never lose known-good addresses
+      lifiApprovedSpenders = new Set([
+        ...LIFI_HARDCODED_SPENDERS.map(a => a.toLowerCase()),
+        ...addresses,
+      ]);
+    }
+  } catch {
+    // Non-critical — keep using hardcoded set
+  }
+}
+// Refresh once on module load and every 24 hours
+refreshLifiSpenders();
+setInterval(refreshLifiSpenders, 24 * 60 * 60 * 1000);
 
 export interface SwapResult {
   txHash: string;
@@ -133,7 +166,7 @@ async function executeEthSwap(
   // be approved to spend that token on behalf of the user.
   if (!from.isNative && lifiData.estimate.approvalAddress) {
     const spender = lifiData.estimate.approvalAddress.toLowerCase();
-    if (!LIFI_APPROVED_SPENDERS.has(spender)) {
+    if (!lifiApprovedSpenders.has(spender)) {
       throw new Error(
         'Li.Fi returned an unrecognized spender address. Swap aborted for safety.',
       );
@@ -158,17 +191,19 @@ async function executeEthSwap(
   // ── Background confirmation polling ──────────────────────────────────────
   // ETH tx can take 15 s – several minutes; we don't block the UI.
   // The caller receives a callback once the receipt arrives (or times out).
-  if (onStatusUpdate) {
+  // Status is also persisted so recheckPendingTransactions() can pick it up.
+  {
     const provider = signer.provider!;
     provider
       .waitForTransaction(tx.hash, 1, 10 * 60 * 1000) // up to 10 min
       .then((receipt) => {
-        // status 0 = reverted, 1 = success
-        onStatusUpdate(tx.hash, receipt && receipt.status === 1 ? 'confirmed' : 'failed');
+        const status = receipt && receipt.status === 1 ? 'confirmed' : 'failed';
+        updateTxRecord(tx.hash, { status });
+        onStatusUpdate?.(tx.hash, status);
       })
       .catch(() => {
-        // Timeout or network error — don't mark as failed since tx may still be pending
-        // User can check explorer. We leave status as 'pending'.
+        // Timeout or network error — tx may still be pending.
+        // recheckPendingTransactions() will retry on next app resume.
       });
   }
 
@@ -546,7 +581,7 @@ async function executePolSwap(
 
   if (!from.isNative && lifiData.estimate.approvalAddress) {
     const spender = lifiData.estimate.approvalAddress.toLowerCase();
-    if (!LIFI_APPROVED_SPENDERS.has(spender)) {
+    if (!lifiApprovedSpenders.has(spender)) {
       throw new Error('Li.Fi returned an unrecognized spender address. Swap aborted.');
     }
     await ensureERC20Allowance(signer, from.contractAddress!, lifiData.estimate.approvalAddress, BigInt(lifiData.action.fromAmount));
@@ -560,12 +595,14 @@ async function executePolSwap(
     ...(txReq.gasLimit ? { gasLimit: BigInt(txReq.gasLimit) } : {}),
   });
 
-  if (onStatusUpdate) {
+  {
     const provider = signer.provider!;
     provider
       .waitForTransaction(tx.hash, 1, 10 * 60 * 1000)
       .then((receipt) => {
-        onStatusUpdate(tx.hash, receipt && receipt.status === 1 ? 'confirmed' : 'failed');
+        const status = receipt && receipt.status === 1 ? 'confirmed' : 'failed';
+        updateTxRecord(tx.hash, { status });
+        onStatusUpdate?.(tx.hash, status);
       })
       .catch(() => {});
   }
@@ -673,4 +710,60 @@ function secp256k1Sign(msgHash: Buffer, privateKey: Uint8Array): Uint8Array {
   const { secp256k1 } = require('@noble/curves/secp256k1');
   const sig = secp256k1.sign(hash, privateKey, { lowS: true });
   return sig.toDERRawBytes();
+}
+
+// ─── Pending transaction re-checker ───────────────────────────────────────
+// Called on app resume to resolve any transactions that were left 'pending'
+// (e.g. because the app was closed before the confirmation callback fired).
+
+export async function recheckPendingTransactions(
+  onStatusUpdate?: (txHash: string, status: 'confirmed' | 'failed') => void,
+): Promise<void> {
+  const history = await loadTxHistory();
+  const pending = history.filter((tx) => tx.status === 'pending' && tx.txHash && !tx.txHash.startsWith('dev_'));
+  if (pending.length === 0) return;
+
+  const rpc = getRpc();
+  const checks = pending.map(async (tx) => {
+    try {
+      const chain = COINS[tx.fromCoin]?.chain;
+      if (chain === 'ethereum') {
+        const provider = new ethers.JsonRpcProvider(rpc.ETHEREUM);
+        const receipt = await provider.getTransactionReceipt(tx.txHash);
+        if (receipt) {
+          const status = receipt.status === 1 ? 'confirmed' : 'failed';
+          await updateTxRecord(tx.txHash, { status });
+          onStatusUpdate?.(tx.txHash, status);
+        }
+      } else if (chain === 'polygon') {
+        const provider = new ethers.JsonRpcProvider(rpc.POLYGON_RPC);
+        const receipt = await provider.getTransactionReceipt(tx.txHash);
+        if (receipt) {
+          const status = receipt.status === 1 ? 'confirmed' : 'failed';
+          await updateTxRecord(tx.txHash, { status });
+          onStatusUpdate?.(tx.txHash, status);
+        }
+      } else if (chain === 'solana') {
+        const connection = new Connection(rpc.SOLANA, 'confirmed');
+        const sig = await connection.getSignatureStatus(tx.txHash);
+        if (sig?.value?.confirmationStatus === 'confirmed' || sig?.value?.confirmationStatus === 'finalized') {
+          const status = sig.value.err ? 'failed' : 'confirmed';
+          await updateTxRecord(tx.txHash, { status });
+          onStatusUpdate?.(tx.txHash, status);
+        }
+      } else if (chain === 'bitcoin') {
+        const { data } = await axios.get(`${rpc.BITCOIN_API}/tx/${tx.txHash}/status`, { timeout: 10000 });
+        if (data?.confirmed) {
+          await updateTxRecord(tx.txHash, { status: 'confirmed' });
+          onStatusUpdate?.(tx.txHash, 'confirmed');
+        }
+      }
+      // DOGE, XRP, DOT — leave as pending until user checks explorer
+      // (no reliable free API for confirmation status)
+    } catch {
+      // Non-critical — will retry on next app resume
+    }
+  });
+
+  await Promise.allSettled(checks);
 }
