@@ -1,12 +1,9 @@
 /**
- * DevShortcut — shown when __DEV__ is true OR when app.json extra.devMode is true.
- *
- * For release test builds set  "extra": { "devMode": true }  in app.json.
- * Set  "devMode": false  (or remove the key) before shipping to production.
+ * DevShortcut — only shown in Metro dev builds (__DEV__ === true).
+ * Completely stripped from production bundles.
  */
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Constants from 'expo-constants';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../constants/theme';
 import { useScaledTheme } from '../hooks/useScaledTheme';
 
@@ -16,14 +13,9 @@ interface DevShortcutProps {
   onAction: () => void;
 }
 
-function isDevModeEnabled(): boolean {
-  if (__DEV__) return true;
-  return Constants.expoConfig?.extra?.devMode === true;
-}
-
 export function DevShortcut({ label, actionLabel, onAction }: DevShortcutProps) {
   const { fontSize } = useScaledTheme();
-  if (!isDevModeEnabled()) return null;
+  if (!__DEV__) return null;
 
   return (
     <View style={styles.banner}>

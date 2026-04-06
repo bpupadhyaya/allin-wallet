@@ -108,34 +108,32 @@ export function getExplorerTxUrl(
     : `https://solscan.io/tx/${txHash}`;
 }
 
-// ─── Dev / Test shortcuts (stripped from production bundles via __DEV__) ──────
-// These are BIP-39 all-zeros test vectors — they have no real funds.
-export const DEV_MNEMONIC = __DEV__
-  ? 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art'
-  : '';
-export const DEV_USERNAME = __DEV__ ? 'devuser' : '';
-export const DEV_PASSWORD = __DEV__ ? 'DevPass123!' : '';
-export const DEV_PIN = __DEV__ ? '123456' : '';
+// ─── Dev / Test shortcuts ────────────────────────────────────────────────────
+// Loaded from .env.development (gitignored). Empty in production builds.
+export const DEV_MNEMONIC = __DEV__ ? (process.env.EXPO_PUBLIC_DEV_MNEMONIC || '') : '';
+export const DEV_USERNAME = __DEV__ ? (process.env.EXPO_PUBLIC_DEV_USERNAME || '') : '';
+export const DEV_PASSWORD = __DEV__ ? (process.env.EXPO_PUBLIC_DEV_PASSWORD || '') : '';
+export const DEV_PIN = __DEV__ ? (process.env.EXPO_PUBLIC_DEV_PIN || '') : '';
 
 const DEV_ADDRESSES_MAINNET = {
-  btc: 'bc1qzmtrqsfuaf6l6kkcsseumq26ukaphfj9skkug6',
-  eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
-  sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
-  ada: 'addr1qx0dev0placeholder0000000000000000000000000000000000000',
-  doge: 'D8mFPxYRkSJFJVxJcaRKwE1Ddev000000',
-  xrp: 'rDevPlaceholderXRP000000000000',
-  dot: '1DevPlaceholderDOT00000000000000000000000000000',
-  pol: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
+  btc: process.env.EXPO_PUBLIC_DEV_BTC || '',
+  eth: process.env.EXPO_PUBLIC_DEV_ETH || '',
+  sol: process.env.EXPO_PUBLIC_DEV_SOL || '',
+  ada: process.env.EXPO_PUBLIC_DEV_ADA || '',
+  doge: process.env.EXPO_PUBLIC_DEV_DOGE || '',
+  xrp: process.env.EXPO_PUBLIC_DEV_XRP || '',
+  dot: process.env.EXPO_PUBLIC_DEV_DOT || '',
+  pol: process.env.EXPO_PUBLIC_DEV_POL || '',
 };
 const DEV_ADDRESSES_TESTNET = {
-  btc: 'tb1qtk89me2ae95dmlp3yfl4q9ynpux8mxjujuf2fr',
-  eth: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
-  sol: '3Cy3YNTFywCmxoxt8n7UH6hg6dLo5uACowX3CFceaSnx',
-  ada: 'addr_test1qx0dev0placeholder00000000000000000000000000000000000',
-  doge: 'D8mFPxYRkSJFJVxJcaRKwE1Ddev000000',
-  xrp: 'rDevPlaceholderXRP000000000000',
-  dot: '1DevPlaceholderDOT00000000000000000000000000000',
-  pol: '0xf278cf59f82edcf871d630f28ecc8056f25c1cdb',
+  btc: process.env.EXPO_PUBLIC_DEV_BTC_TEST || '',
+  eth: process.env.EXPO_PUBLIC_DEV_ETH || '',
+  sol: process.env.EXPO_PUBLIC_DEV_SOL || '',
+  ada: process.env.EXPO_PUBLIC_DEV_ADA_TEST || '',
+  doge: process.env.EXPO_PUBLIC_DEV_DOGE || '',
+  xrp: process.env.EXPO_PUBLIC_DEV_XRP || '',
+  dot: process.env.EXPO_PUBLIC_DEV_DOT || '',
+  pol: process.env.EXPO_PUBLIC_DEV_POL || '',
 };
 
 export function getDevAddresses() {

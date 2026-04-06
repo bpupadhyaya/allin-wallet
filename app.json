@@ -41,8 +41,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "devMode": false
-    }
+    "extra": {}
   }
 }
