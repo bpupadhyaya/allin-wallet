@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DevShortcut } from '../../../src/components/DevShortcut';
+import { DevWalletBar } from '../../../src/components/DevWalletBar';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../../src/constants/theme';
 import { useAppStore } from '../../../src/store/appStore';
 import { DEV_MNEMONIC } from '../../../src/constants/config';
@@ -143,6 +144,9 @@ export default function OnboardingIndex() {
             router.push('/(auth)/onboarding/credentials');
           }}
         />
+
+        {/* Dev quick wallets — ⚠️ REMOVE BEFORE PRODUCTION RELEASE */}
+        <DevWalletBar />
       </ScrollView>
     </SafeAreaView>
   );

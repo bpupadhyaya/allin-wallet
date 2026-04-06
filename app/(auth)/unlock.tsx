@@ -11,6 +11,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +30,7 @@ import { Button } from '../../src/components/Button';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { DevShortcut } from '../../src/components/DevShortcut';
 import { DEV_PIN } from '../../src/constants/config';
+import { DEV_WALLETS } from '../../src/constants/devWallets';
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 type Mode = 'pin' | 'password';
@@ -45,6 +48,7 @@ export default function UnlockScreen() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutCount, setLockoutCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
+  const [unlockStatus, setUnlockStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -60,13 +64,16 @@ export default function UnlockScreen() {
 
   async function handleBiometric() {
     try {
+      setUnlockStatus('Verifying biometrics…');
       const ok = await authenticateWithBiometrics('Unlock AllIn Wallet');
       if (ok) {
+        setUnlockStatus('Loading wallet…');
         unlock();
         router.replace('/(wallet)/dashboard');
       }
+      setUnlockStatus(null);
     } catch {
-      // Fall through to PIN
+      setUnlockStatus(null);
     }
   }
 
@@ -95,13 +102,22 @@ export default function UnlockScreen() {
   async function handlePinComplete(pin: string) {
     if (!checkRateLimit()) return;
     setPinError('');
+    setUnlockStatus('Verifying PIN (bcrypt)…');
     try {
       const ok = await verifyPin(pin);
-      if (!ok) { setPinError('Incorrect PIN. Try again.'); recordFailedAttempt(); return; }
+      if (!ok) {
+        setUnlockStatus(null);
+        setPinError('Incorrect PIN. Try again.');
+        recordFailedAttempt();
+        return;
+      }
       setFailedAttempts(0);
+      setUnlockStatus('Loading wallet…');
       unlock();
       router.replace('/(wallet)/dashboard');
+      setUnlockStatus(null);
     } catch {
+      setUnlockStatus(null);
       setPinError('PIN verification failed. Try your password.');
     }
   }
@@ -111,13 +127,22 @@ export default function UnlockScreen() {
     if (!password) { setPwError('Please enter your password'); return; }
     setLoading(true);
     setPwError('');
+    setUnlockStatus('Verifying password (bcrypt)…');
     try {
       const ok = await verifyPassword(password);
-      if (!ok) { setPwError('Incorrect password'); recordFailedAttempt(); return; }
+      if (!ok) {
+        setUnlockStatus(null);
+        setPwError('Incorrect password');
+        recordFailedAttempt();
+        return;
+      }
       setFailedAttempts(0);
+      setUnlockStatus('Loading wallet…');
       unlock();
       router.replace('/(wallet)/dashboard');
+      setUnlockStatus(null);
     } catch {
+      setUnlockStatus(null);
       setPwError('Verification failed. Please try again.');
     } finally {
       setLoading(false);
@@ -144,6 +169,15 @@ export default function UnlockScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Status popup */}
+      <Modal visible={unlockStatus !== null} transparent animationType="fade">
+        <View style={styles.statusOverlay}>
+          <View style={styles.statusCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.statusText}>{unlockStatus}</Text>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -203,6 +237,20 @@ export default function UnlockScreen() {
               actionLabel="Dev Unlock (1 tap)"
               onAction={() => handlePinComplete(DEV_PIN)}
             />
+            {/* Dev wallet quick PIN — ⚠️ REMOVE BEFORE PRODUCTION RELEASE */}
+            {(() => {
+              const match = DEV_WALLETS.find((w) => w.username === username);
+              if (!match) return null;
+              return (
+                <TouchableOpacity
+                  style={styles.devPinBtn}
+                  onPress={() => handlePinComplete(match.pin)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.devPinBtnText}>Dev unlock {match.id}</Text>
+                </TouchableOpacity>
+              );
+            })()}
           </>
         ) : (
           <View style={styles.form}>
@@ -290,6 +338,42 @@ const styles = StyleSheet.create({
   toggleTextActive: { color: COLORS.text },
 
   form: { gap: SPACING.md },
+
+  statusOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  statusCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '44',
+    padding: SPACING.xl,
+    alignItems: 'center',
+    gap: SPACING.md,
+    width: '100%',
+    maxWidth: 280,
+  },
+  statusText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+    textAlign: 'center',
+  },
+
+  devPinBtn: {
+    backgroundColor: COLORS.warning + '18',
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.warning + '55',
+  },
+  devPinBtnText: { color: COLORS.warning, fontSize: 12, fontWeight: FONT_WEIGHT.bold },
 
   signOutLink: { alignItems: 'center', paddingVertical: SPACING.sm },
   signOutText: { color: COLORS.textMuted, fontSize: FONT_SIZE.sm },

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -245,6 +246,8 @@ export default function Dashboard() {
   const {
     username,
     addresses,
+    balances: currentBalances,
+    prices,
     balancesLoading,
     pricesLoading,
     setBalances,
@@ -266,7 +269,12 @@ export default function Dashboard() {
       jobs.push(
         fetchAllBalances(addresses)
           .then((b) => {
-            setBalances(b);
+            // If fetch returned all zeros but we have existing balances, keep stale
+            const allZero = Object.values(b).every((v) => v === 0);
+            const hasExisting = Object.values(currentBalances).some((v) => v > 0);
+            if (!allZero || !hasExisting) {
+              setBalances(b);
+            }
             setLastUpdated(new Date());
           })
           .catch(() => {/* show stale */})
@@ -301,9 +309,17 @@ export default function Dashboard() {
   }
 
   const updating = balancesLoading || pricesLoading;
+  const isFirstLoad = updating && prices.BTC === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Prominent loading banner on first load */}
+      {isFirstLoad && (
+        <View style={styles.loadingBanner}>
+          <ActivityIndicator color={COLORS.primary} size="small" />
+          <Text style={styles.loadingText}>Fetching prices & balances…</Text>
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
@@ -394,6 +410,17 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxl },
+  loadingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary + '22',
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.primary + '44',
+  },
+  loadingText: { color: COLORS.primary, fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.bold },
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greeting: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },

@@ -7,6 +7,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,6 +38,7 @@ import {
   FONT_SIZE,
   BORDER_RADIUS, FONT_WEIGHT } from '../../src/constants/theme';
 import { DEV_USERNAME, getDevAddresses } from '../../src/constants/config';
+import { DevWalletBar } from '../../src/components/DevWalletBar';
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 
 type Mode = 'password' | 'pin';
@@ -52,8 +55,9 @@ export default function LoginScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricLabel, setBiometricLabel] = useState('Biometrics');
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockoutCount, setLockoutCount] = useState(0); // how many times we've hit the threshold
+  const [lockoutCount, setLockoutCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
+  const [authStatus, setAuthStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkBiometric() {
@@ -110,18 +114,24 @@ export default function LoginScreen() {
     if (!password) { setPwError('Please enter your password'); return; }
     setLoading(true);
     setPwError('');
+    setAuthStatus('Checking username…');
     try {
       const storedUser = await getUsername();
       if (storedUser?.toLowerCase() !== username.trim().toLowerCase()) {
+        setAuthStatus(null);
         setPwError('Invalid username or password');
         recordFailedAttempt();
         return;
       }
+      setAuthStatus('Verifying password (bcrypt)…');
       const ok = await verifyPassword(password);
-      if (!ok) { setPwError('Invalid username or password'); recordFailedAttempt(); return; }
+      if (!ok) { setAuthStatus(null); setPwError('Invalid username or password'); recordFailedAttempt(); return; }
       setFailedAttempts(0);
+      setAuthStatus('Loading wallet data…');
       await loginSuccess(storedUser);
+      setAuthStatus(null);
     } catch {
+      setAuthStatus(null);
       setPwError('Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -132,13 +142,17 @@ export default function LoginScreen() {
   async function handlePinComplete(pin: string) {
     if (!checkRateLimit()) return;
     setPinError('');
+    setAuthStatus('Verifying PIN (bcrypt)…');
     try {
       const ok = await verifyPin(pin);
-      if (!ok) { setPinError('Incorrect PIN. Try again.'); recordFailedAttempt(); return; }
+      if (!ok) { setAuthStatus(null); setPinError('Incorrect PIN. Try again.'); recordFailedAttempt(); return; }
       setFailedAttempts(0);
+      setAuthStatus('Loading wallet data…');
       const storedUser = await getUsername();
       await loginSuccess(storedUser ?? 'User');
+      setAuthStatus(null);
     } catch {
+      setAuthStatus(null);
       setPinError('PIN verification failed. Try your password.');
     }
   }
@@ -146,13 +160,16 @@ export default function LoginScreen() {
   // ── Biometric ─────────────────────────────────────────────────────────────
   async function handleBiometricLogin() {
     try {
+      setAuthStatus('Verifying biometrics…');
       const ok = await authenticateWithBiometrics('Unlock AllIn Wallet');
       if (ok) {
+        setAuthStatus('Loading wallet data…');
         const storedUser = await getUsername();
         await loginSuccess(storedUser ?? 'User');
       }
+      setAuthStatus(null);
     } catch {
-      // Silently fail — user can fall back to password/PIN
+      setAuthStatus(null);
     }
   }
 
@@ -180,6 +197,15 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Auth status popup */}
+      <Modal visible={authStatus !== null} transparent animationType="fade">
+        <View style={styles.statusOverlay}>
+          <View style={styles.statusCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.statusText}>{authStatus}</Text>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -280,6 +306,9 @@ export default function LoginScreen() {
           onAction={handleDevLogin}
         />
 
+        {/* Dev quick wallets — ⚠️ REMOVE BEFORE PRODUCTION RELEASE */}
+        <DevWalletBar />
+
         {/* Create / restore wallet link */}
         <TouchableOpacity
           style={styles.createLink}
@@ -363,6 +392,30 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
     lineHeight: 18,
+  },
+  statusOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  statusCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '44',
+    padding: SPACING.xl,
+    alignItems: 'center',
+    gap: SPACING.md,
+    width: '100%',
+    maxWidth: 280,
+  },
+  statusText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+    textAlign: 'center',
   },
   createLink: { alignItems: 'center', paddingVertical: SPACING.sm },
   createLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },

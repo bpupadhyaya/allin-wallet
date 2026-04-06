@@ -25,7 +25,8 @@ import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/co
 import { saveTestnetEnabled } from '../../src/services/storage';
 import { deriveWalletsFromMnemonic } from '../../src/crypto/wallets';
 import { ZERO_BALANCES } from '../../src/services/balance';
-import { getMnemonic, saveWalletAddresses, saveDisplayScales } from '../../src/services/storage';
+import { getMnemonic, saveWalletAddresses, saveDisplayScales, getUsername } from '../../src/services/storage';
+import { DEV_WALLETS } from '../../src/constants/devWallets';
 
 const SLIPPAGE_OPTIONS = [0.1, 0.5, 1.0, 2.0];
 
@@ -513,6 +514,49 @@ export default function Settings() {
             </Text>
           </View>
         )}
+
+        {/* Dev Testing — ⚠️ REMOVE BEFORE PRODUCTION RELEASE */}
+        {(() => {
+          const match = DEV_WALLETS.find((w) => w.username === username);
+          if (!match) return null;
+          return (
+            <View style={styles.section}>
+              <SectionLabel label="Dev Testing" />
+              <View style={styles.card}>
+                <SettingRow
+                  icon="🧪"
+                  label={`Active dev wallet: ${match.id} (${match.username})`}
+                  sub="This is a test wallet. Delete it to switch to a different dev wallet or create a production wallet."
+                />
+                <SettingRow
+                  icon="🗑"
+                  label="Delete Dev Wallet"
+                  sub="Removes this dev wallet so you can create or switch to another."
+                  onPress={() => {
+                    Alert.alert(
+                      'Delete Dev Wallet?',
+                      `This will remove ${match.id} (${match.username}). You can re-create it from the sign-in screen.`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Delete',
+                          style: 'destructive',
+                          onPress: async () => {
+                            await clearAllData();
+                            await clearTxHistory();
+                            logout();
+                            router.replace('/(auth)/onboarding');
+                          },
+                        },
+                      ],
+                    );
+                  }}
+                  danger
+                />
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Danger zone */}
         <View style={styles.section}>
