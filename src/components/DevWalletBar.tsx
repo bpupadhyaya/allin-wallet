@@ -201,16 +201,40 @@ export function DevWalletBar() {
             <Text style={styles.instructionTitle}>What happens when you tap a wallet?</Text>
             <Text style={styles.instructionText}>
               {'• First tap creates the wallet using the same process as a real wallet — seed phrase derivation, password encryption (bcrypt 12 rounds), PIN encryption (bcrypt 10 rounds), and secure storage.\n'}
-              {'• Subsequent taps restore the wallet instantly from cache.\n'}
-              {'• You can switch between wallets freely — all are persistent.'}
+              {'• Subsequent taps restore the wallet instantly from a local cache.\n'}
+              {'• You can switch between wallets freely — all are persistent across app restarts.'}
             </Text>
 
-            <Text style={styles.instructionTitle}>How are they different from real wallets?</Text>
-            <Text style={styles.instructionText}>
-              {'• They use pre-set seed phrases (publicly known test vectors) — never use them for real funds.\n'}
-              {'• Token balances are simulated for testing swaps, sends, and receives.\n'}
-              {'• Everything else is identical: encryption, storage, transaction signing, and UI flows.'}
-            </Text>
+            <Text style={styles.instructionTitle}>Practice vs. Real Wallet — Comparison</Text>
+            <View style={tbl.table}>
+              {/* Header */}
+              <View style={tbl.headerRow}>
+                <Text style={[tbl.cell, tbl.headerCell, tbl.featureCol]}>Feature</Text>
+                <Text style={[tbl.cell, tbl.headerCell, tbl.valCol]}>Practice</Text>
+                <Text style={[tbl.cell, tbl.headerCell, tbl.valCol]}>Real</Text>
+              </View>
+              {[
+                ['Seed phrase', 'Pre-set (public test vectors)', 'Your own (private, generated securely)'],
+                ['Password encryption', 'bcrypt 12 rounds', 'bcrypt 12 rounds'],
+                ['PIN encryption', 'bcrypt 10 rounds', 'bcrypt 10 rounds'],
+                ['Secure storage', 'OS Keychain / Keystore', 'OS Keychain / Keystore'],
+                ['Address derivation', 'BIP-44 / SLIP-10 (8 chains)', 'BIP-44 / SLIP-10 (8 chains)'],
+                ['Token balances', 'Simulated ($1,000+ per token)', 'Real on-chain balances'],
+                ['Transactions', 'UI flow works, no real broadcast', 'Real blockchain transactions'],
+                ['Biometric unlock', 'Same (Face ID / Fingerprint)', 'Same (Face ID / Fingerprint)'],
+                ['Session timeout', '15-min auto-lock', '15-min auto-lock'],
+                ['Lockout policy', 'Exponential backoff', 'Exponential backoff'],
+                ['WalletConnect', 'Same dApp signing flow', 'Same dApp signing flow'],
+                ['Multi-wallet switching', 'Instant (cached hashes)', 'Single wallet only'],
+                ['Funds at risk', 'None — no real value', 'Yes — real crypto assets'],
+              ].map(([feature, practice, real], i) => (
+                <View key={i} style={[tbl.row, i % 2 === 0 && tbl.rowAlt]}>
+                  <Text style={[tbl.cell, tbl.featureCol, tbl.featureText]}>{feature}</Text>
+                  <Text style={[tbl.cell, tbl.valCol, tbl.valText]}>{practice}</Text>
+                  <Text style={[tbl.cell, tbl.valCol, tbl.valText]}>{real}</Text>
+                </View>
+              ))}
+            </View>
 
             <Text style={styles.instructionTitle}>How should you use them?</Text>
             <Text style={styles.instructionText}>
@@ -218,17 +242,19 @@ export function DevWalletBar() {
               {'• Practice swapping tokens (SOL ↔ USDC, ETH ↔ BTC, etc.).\n'}
               {'• Test receiving by copying addresses and verifying QR codes.\n'}
               {'• Lock the app and unlock with PIN, password, or biometrics.\n'}
-              {'• Switch between wallets to verify multi-wallet workflows.\n'}
-              {'• Explore every screen and feature to build confidence.'}
+              {'• Switch between wallets in Settings to verify multi-wallet workflows.\n'}
+              {'• Explore every screen and feature to build confidence before using real funds.'}
             </Text>
 
             <Text style={styles.instructionTitle}>You are in charge</Text>
             <Text style={styles.instructionText}>
               AllIn Wallet is free and open source. Every line of code is available for
-              inspection. These practice wallets let you verify every functionality
-              without risk — no real funds, no real transactions on the blockchain.
-              Once you are confident, create your real wallet through the secure
-              onboarding process.
+              inspection at github.com/bpupadhyaya/allin-wallet. These practice wallets
+              let you verify every functionality without risk — no real funds, no real
+              transactions on the blockchain. No support is provided since the app is
+              free and open source, but you have every right to examine the code,
+              report issues, and contribute improvements. Once you are confident,
+              create your real wallet through the secure onboarding process.
             </Text>
           </View>
         )}
@@ -274,6 +300,60 @@ export function DevWalletBar() {
     </>
   );
 }
+
+// Comparison table styles
+const tbl = StyleSheet.create({
+  table: {
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary + '22',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  row: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  rowAlt: {
+    backgroundColor: COLORS.bg + '80',
+  },
+  cell: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  headerCell: {
+    color: COLORS.primary,
+    fontSize: 10,
+    fontWeight: FONT_WEIGHT.heavy,
+    letterSpacing: 0.3,
+  },
+  featureCol: {
+    flex: 2,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+  },
+  featureText: {
+    color: COLORS.text,
+    fontSize: 10,
+    fontWeight: FONT_WEIGHT.bold,
+  },
+  valCol: {
+    flex: 3,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+  },
+  valText: {
+    color: COLORS.textSecondary,
+    fontSize: 10,
+    lineHeight: 14,
+  },
+});
 
 const modalStyles = StyleSheet.create({
   overlay: {
