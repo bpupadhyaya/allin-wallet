@@ -15,12 +15,17 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT } from '../../sr
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 import { COINS, COIN_LIST } from '../../src/constants/coins';
 
-type ChainTab = 'bitcoin' | 'ethereum' | 'solana';
+type ChainTab = 'bitcoin' | 'ethereum' | 'solana' | 'cardano' | 'dogecoin' | 'xrp' | 'polkadot' | 'polygon';
 
 const CHAINS: { id: ChainTab; label: string; icon: string; color: string }[] = [
   { id: 'bitcoin', label: 'Bitcoin', icon: '₿', color: '#F7931A' },
   { id: 'ethereum', label: 'Ethereum', icon: 'Ξ', color: '#627EEA' },
   { id: 'solana', label: 'Solana', icon: '◎', color: '#9945FF' },
+  { id: 'cardano', label: 'Cardano', icon: '₳', color: '#0033AD' },
+  { id: 'dogecoin', label: 'Dogecoin', icon: 'Ð', color: '#C2A633' },
+  { id: 'xrp', label: 'XRP', icon: '✕', color: '#23292F' },
+  { id: 'polkadot', label: 'Polkadot', icon: '●', color: '#E6007A' },
+  { id: 'polygon', label: 'Polygon', icon: '⬟', color: '#8247E5' },
 ];
 
 function chainAssets(chain: ChainTab) {
@@ -34,12 +39,17 @@ export default function ReceiveScreen() {
   const [copied, setCopied] = useState(false);
 
   const chainConfig = CHAINS.find((c) => c.id === chain)!;
-  const address =
-    chain === 'bitcoin'
-      ? addresses?.btc ?? ''
-      : chain === 'ethereum'
-        ? addresses?.eth ?? ''
-        : addresses?.sol ?? '';
+  const chainAddressMap: Record<ChainTab, string> = {
+    bitcoin: addresses?.btc ?? '',
+    ethereum: addresses?.eth ?? '',
+    solana: addresses?.sol ?? '',
+    cardano: addresses?.ada ?? '',
+    dogecoin: addresses?.doge ?? '',
+    xrp: addresses?.xrp ?? '',
+    polkadot: addresses?.dot ?? '',
+    polygon: addresses?.pol ?? '',
+  };
+  const address = chainAddressMap[chain];
 
   const assets = chainAssets(chain);
 

@@ -363,6 +363,11 @@ export default function SwapScreen() {
     if (chain === 'bitcoin') return addresses?.btc;
     if (chain === 'ethereum') return addresses?.eth;
     if (chain === 'solana') return addresses?.sol;
+    if (chain === 'dogecoin') return addresses?.doge;
+    if (chain === 'xrp') return addresses?.xrp;
+    if (chain === 'cardano') return addresses?.ada;
+    if (chain === 'polkadot') return addresses?.dot;
+    if (chain === 'polygon') return addresses?.pol;
     return undefined;
   }
 
@@ -427,11 +432,15 @@ export default function SwapScreen() {
           onPress: async () => {
             setSwapping(true);
             try {
-              const btcAddr = fromCoin === 'BTC' ? addresses?.btc : undefined;
+              // UTXO-based chains need sender address for coin selection
+              const senderAddr = fromCoin === 'BTC' ? addresses?.btc
+                : fromCoin === 'DOGE' ? addresses?.doge
+                : fromCoin === 'XRP' ? addresses?.xrp
+                : undefined;
 
               const res = await executeSwap(
                 quote,
-                btcAddr,
+                senderAddr,
                 // Background callback for ETH tx confirmation
                 async (txHash, status) => {
                   updateTxStatus(txHash, status);

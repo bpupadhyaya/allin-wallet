@@ -84,6 +84,9 @@ export async function executeSwap(
     case 'dogecoin':
       if (!btcSenderAddress) throw new Error('DOGE sender address required');
       return executeDogeSwap(quote, mnemonic, btcSenderAddress);
+    case 'xrp':
+      if (!btcSenderAddress) throw new Error('XRP sender address required');
+      return executeXrpSwap(quote, mnemonic, btcSenderAddress);
     case 'polygon':
       return executePolSwap(quote, mnemonic, onStatusUpdate);
     default:
@@ -572,4 +575,102 @@ async function executePolSwap(
     status: 'pending',
     explorerUrl: getExplorerTxUrl('polygon', tx.hash),
   };
+}
+
+// ─── XRP via THORChain ────────────────────────────────────────────────────
+// XRP is account-based. We send a Payment transaction to THORChain's inbound
+// vault with the swap memo in the Memos field.
+
+async function executeXrpSwap(
+  quote: SwapQuote,
+  mnemonic: string,
+  senderAddress: string,
+): Promise<SwapResult> {
+  const rawData = quote.rawData as {
+    inbound_address: string;
+    memo: string;
+  };
+
+  if (!rawData.inbound_address || !rawData.memo) {
+    throw new Error('THORChain quote missing inbound_address or memo');
+  }
+
+  const { privateKey, publicKey } = await getXrpKeyPair(mnemonic);
+  const amountDrops = Math.round(quote.fromAmount * 1e6).toString();
+
+  // Fetch current ledger sequence for the account
+  const { data: accountInfo } = await axios.post(getRpc().XRP_RPC, {
+    method: 'account_info',
+    params: [{ account: senderAddress, ledger_index: 'validated' }],
+  }, { timeout: 10000 });
+
+  const sequence = accountInfo.result?.account_data?.Sequence;
+  if (sequence === undefined) {
+    throw new Error('Could not fetch XRP account sequence. Is the account activated (10 XRP minimum)?');
+  }
+
+  // Fetch current ledger index for LastLedgerSequence
+  const { data: ledgerInfo } = await axios.post(getRpc().XRP_RPC, {
+    method: 'ledger_current',
+    params: [{}],
+  }, { timeout: 10000 });
+  const currentLedger = ledgerInfo.result?.ledger_current_index ?? 0;
+
+  // Build the Payment transaction
+  const txJson = {
+    TransactionType: 'Payment',
+    Account: senderAddress,
+    Destination: rawData.inbound_address,
+    Amount: amountDrops,
+    Fee: '12', // Standard XRP fee (12 drops)
+    Sequence: sequence,
+    LastLedgerSequence: currentLedger + 20, // ~80 seconds to confirm
+    Memos: [{
+      Memo: {
+        MemoData: Buffer.from(rawData.memo).toString('hex').toUpperCase(),
+        MemoType: Buffer.from('text/plain').toString('hex').toUpperCase(),
+      },
+    }],
+  };
+
+  // Serialize, sign, and submit using ripple binary codec
+  // We use a lightweight approach: serialize → sign → encode → submit
+  const { encode, encodeForSigning } = await import('ripple-binary-codec');
+  const forSigning = encodeForSigning(txJson);
+  const sigBytes = secp256k1Sign(Buffer.from(forSigning, 'hex'), privateKey);
+  const signedTx = {
+    ...txJson,
+    SigningPubKey: Buffer.from(publicKey).toString('hex').toUpperCase(),
+    TxnSignature: Buffer.from(sigBytes).toString('hex').toUpperCase(),
+  };
+  const txBlob = encode(signedTx);
+
+  // Submit
+  const { data: submitResult } = await axios.post(getRpc().XRP_RPC, {
+    method: 'submit',
+    params: [{ tx_blob: txBlob }],
+  }, { timeout: 15000 });
+
+  const engineResult = submitResult.result?.engine_result;
+  if (engineResult && engineResult !== 'tesSUCCESS' && !engineResult.startsWith('tes')) {
+    throw new Error(`XRP transaction rejected: ${engineResult} — ${submitResult.result?.engine_result_message}`);
+  }
+
+  const txHash = submitResult.result?.tx_json?.hash || submitResult.result?.hash || '';
+
+  return {
+    txHash,
+    status: 'pending',
+    explorerUrl: getExplorerTxUrl('xrp', txHash),
+  };
+}
+
+// Minimal secp256k1 signing for XRP (DER-encoded ECDSA signature)
+function secp256k1Sign(msgHash: Buffer, privateKey: Uint8Array): Uint8Array {
+  const { sha512 } = require('@noble/hashes/sha512');
+  // XRP uses SHA-512 first half as the signing hash
+  const hash = sha512(msgHash).slice(0, 32);
+  const { secp256k1 } = require('@noble/curves/secp256k1');
+  const sig = secp256k1.sign(hash, privateKey, { lowS: true });
+  return sig.toDERRawBytes();
 }
