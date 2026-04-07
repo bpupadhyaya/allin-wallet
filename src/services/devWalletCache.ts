@@ -62,15 +62,24 @@ export async function getCreatedDevWalletIds(): Promise<string[]> {
 }
 
 export async function restoreCachedWallet(cached: CachedWallet): Promise<void> {
+  // Validate cache integrity before restoring
+  if (!cached.mnemonic) throw new Error('Cache corrupted: missing mnemonic');
+  if (!cached.username) throw new Error('Cache corrupted: missing username');
+  if (!cached.passwordHash) throw new Error('Cache corrupted: missing password hash');
+  if (!cached.pinHash) throw new Error('Cache corrupted: missing PIN hash');
+  if (!cached.addresses) throw new Error('Cache corrupted: missing addresses');
+
   const SO = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
-  await Promise.all([
-    SecureStore.setItemAsync('wallet_mnemonic_v1', cached.mnemonic, SO),
-    SecureStore.setItemAsync('wallet_username_v1', cached.username, SO),
-    SecureStore.setItemAsync('wallet_pw_hash_v1', cached.passwordHash, SO),
-    SecureStore.setItemAsync('wallet_pin_hash_v1', cached.pinHash, SO),
-    AsyncStorage.setItem('wallet_type_v1', cached.walletType),
-    AsyncStorage.setItem('wallet_addresses_v1', JSON.stringify(cached.addresses)),
-  ]);
+  // Write sequentially to avoid partial state on failure
+  await SecureStore.setItemAsync('wallet_mnemonic_v1', cached.mnemonic, SO);
+  await SecureStore.setItemAsync('wallet_username_v1', cached.username, SO);
+  await SecureStore.setItemAsync('wallet_pw_hash_v1', cached.passwordHash, SO);
+  await SecureStore.setItemAsync('wallet_pin_hash_v1', cached.pinHash, SO);
+  await AsyncStorage.setItem('wallet_type_v1', cached.walletType);
+  await AsyncStorage.setItem(
+    'wallet_addresses_v1',
+    typeof cached.addresses === 'string' ? cached.addresses : JSON.stringify(cached.addresses),
+  );
 }
 
 export async function deleteCachedDevWallet(id: string): Promise<void> {

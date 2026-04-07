@@ -140,7 +140,8 @@ function DevWalletSwitcher({ username }: { username: string | null }) {
       router.replace('/(wallet)/dashboard');
     } catch (e) {
       setSwitching(null);
-      Alert.alert('Switch Failed', e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      Alert.alert('Switch Failed', `${config.id.toUpperCase()}: ${msg}`);
     }
   }
 
