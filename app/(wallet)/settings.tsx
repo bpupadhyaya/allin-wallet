@@ -401,12 +401,11 @@ export default function Settings() {
   function handleSignOut() {
     Alert.alert(
       'Sign Out',
-      'Sign out completely? Your wallet will remain on this device — use your credentials to sign back in.',
+      'You will be taken to the sign-in screen. Your wallet and seed phrase remain safely stored on this device.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
-          style: 'destructive',
           onPress: () => {
             logout();
             router.replace('/(auth)/login');

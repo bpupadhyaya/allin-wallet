@@ -152,15 +152,14 @@ export default function UnlockScreen() {
   function handleSignOut() {
     Alert.alert(
       'Sign Out',
-      'This will sign you out completely. You will need your seed phrase or credentials to restore access.',
+      'You will be taken to the sign-in screen. Your wallet and seed phrase remain safely stored on this device.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
-          style: 'destructive',
           onPress: () => {
             logout();
-            router.replace('/(auth)/onboarding');
+            router.replace('/(auth)/login');
           },
         },
       ],
