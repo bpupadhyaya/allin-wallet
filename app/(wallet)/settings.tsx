@@ -523,7 +523,7 @@ export default function Settings() {
           <SettingRow
             icon="🚪"
             label="Sign Out"
-            sub="Remove this account from the app"
+            sub="Lock the app and return to the sign-in screen"
             onPress={handleSignOut}
             danger
           />
