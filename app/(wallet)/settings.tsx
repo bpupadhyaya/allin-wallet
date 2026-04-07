@@ -18,7 +18,7 @@ import {
   setBiometricEnabled as persistBiometricEnabled,
   isBiometricEnabled,
 } from '../../src/services/biometric';
-import { clearTxHistory } from '../../src/services/txHistory';
+import { clearTxHistory, loadTxHistory } from '../../src/services/txHistory';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, FONT_WEIGHT, DEFAULT_DISPLAY_SCALES } from '../../src/constants/theme';
 import { useScaledTheme } from '../../src/hooks/useScaledTheme';
 import { APP_VERSION, IS_DEV, SESSION_TIMEOUT_MS, isTestnet } from '../../src/constants/config';
